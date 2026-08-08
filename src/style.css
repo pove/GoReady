@@ -157,6 +157,11 @@ main {
   color: #166534;
 }
 
+.banner-info {
+  background: #e0f2fe;
+  color: #075985;
+}
+
 /* Stats */
 
 .stats-card {

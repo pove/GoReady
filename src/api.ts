@@ -1,3 +1,4 @@
+import { TRAINING_ADVICE_FIELD } from './constants';
 import { parseWellnessCsv } from './csv';
 import type { Settings, WellnessRow } from './types';
 
@@ -49,9 +50,9 @@ async function proxyRequest(
   return response;
 }
 
-/** Fetches resting HR / rMSSD / SDNN for the given date range (inclusive), newest first. */
+/** Fetches resting HR / rMSSD / SDNN / TrainingAdvice for the given date range (inclusive), newest first. */
 export async function fetchWellness(settings: Settings, oldest: string, newest: string): Promise<WellnessRow[]> {
-  const cols = [settings.fieldRHR, settings.fieldRMSSD, settings.fieldSDNN].join(',');
+  const cols = [settings.fieldRHR, settings.fieldRMSSD, settings.fieldSDNN, TRAINING_ADVICE_FIELD].join(',');
   const athleteId = encodeURIComponent(settings.athleteId);
   const apiPath = `athlete/${athleteId}/wellness.csv?oldest=${oldest}&newest=${newest}&cols=${cols}`;
 
@@ -66,6 +67,6 @@ export async function putTrainingAdvice(settings: Settings, date: string, advice
   const apiPath = `athlete/${athleteId}/wellness/${date}`;
   await proxyRequest(settings, apiPath, {
     method: 'PUT',
-    body: { TrainingAdvice: adviceCode ?? '' },
+    body: { [TRAINING_ADVICE_FIELD]: adviceCode ?? '' },
   });
 }

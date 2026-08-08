@@ -33,7 +33,9 @@ z-scores are run through the same decision tree as the MATLAB version to
 produce one of: `HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`, or "no data".
 That result maps to a `TrainingAdvice` code (1-4) that gets written back to
 intervals.icu when "Write today's readiness back to intervals.icu" is enabled
-in settings.
+in settings. If intervals.icu already has a `TrainingAdvice` value for today
+(e.g. from an earlier refresh), GoReady leaves it alone instead of writing it
+again on every page load.
 
 ## Local development
 

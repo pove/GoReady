@@ -4,6 +4,7 @@ import { computeReadiness, computeReadinessTrail } from './score';
 import { isConfigured, loadSettings, saveSettings } from './settings';
 import { requiredHistoryDays } from './trendChart';
 import { renderDashboard, renderSettingsForm, showError, showLoading } from './ui';
+import type { AdviceStatus } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('#app root element not found');
@@ -54,18 +55,25 @@ async function loadDashboard(): Promise<void> {
     const result = computeReadiness(rows);
     const trail = computeReadinessTrail(rows, GAUGE_TRAIL_DAYS);
 
-    let adviceError: string | null = null;
+    let adviceStatus: AdviceStatus = { kind: 'disabled' };
     if (settings.sendTrainingAdvice) {
-      try {
-        await putTrainingAdvice(settings, today, result.adviceCode);
-      } catch (error) {
-        adviceError = describeError(error);
+      // intervals.icu already has a value for today: sending it again on every
+      // refresh would just be a redundant write, so leave it alone.
+      if (rows[0]?.trainingAdvice) {
+        adviceStatus = { kind: 'already-set' };
+      } else {
+        try {
+          await putTrainingAdvice(settings, today, result.adviceCode);
+          adviceStatus = { kind: 'sent' };
+        } catch (error) {
+          adviceStatus = { kind: 'error', message: describeError(error) };
+        }
       }
     }
 
     renderDashboard(
       app!,
-      { settings, rows, result, trail, adviceError },
+      { settings, rows, result, trail, adviceStatus },
       { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard() },
     );
   } catch (error) {
