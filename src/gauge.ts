@@ -9,7 +9,10 @@ const CENTER_Y = 112;
 const ARC_RADIUS = 82;
 const ARC_STROKE_WIDTH = 26;
 const NEEDLE_LENGTH = 66;
+const TRAIL_NEEDLE_LENGTH = 54;
 const SEGMENT_GAP_DEG = 1.2;
+/** Opacity range for the past-days trail, oldest (dimmest) to most recent (brightest). */
+const TRAIL_OPACITY_RANGE: [number, number] = [0.08, 0.45];
 
 function polarPoint(angleDeg: number, radius: number): { x: number; y: number } {
   const angleRad = (angleDeg * Math.PI) / 180;
@@ -36,23 +39,53 @@ function renderZones(): string {
   }).join('');
 }
 
-function renderNeedle(code: ReadinessCode): string {
+function needleTip(code: ReadinessCode, length: number): { x: number; y: number } | null {
   const index = GAUGE_ORDER.indexOf(code);
-  if (index === -1) return ''; // code 7 (no data): omit the needle entirely.
+  if (index === -1) return null; // code 7 (no data): no meaningful position.
 
   const { start, end } = segmentAngles(index, GAUGE_ORDER.length);
-  const tip = polarPoint((start + end) / 2, NEEDLE_LENGTH);
+  return polarPoint((start + end) / 2, length);
+}
+
+function renderNeedle(code: ReadinessCode): string {
+  const tip = needleTip(code, NEEDLE_LENGTH);
+  if (!tip) return '';
+
   return `
     <line x1="${CENTER_X}" y1="${CENTER_Y}" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}"
-          stroke="#1f2937" stroke-width="4" stroke-linecap="round" />
-    <circle cx="${CENTER_X}" cy="${CENTER_Y}" r="7" fill="#1f2937" />
+          class="gauge-needle" stroke-width="4" stroke-linecap="round" />
+    <circle cx="${CENTER_X}" cy="${CENTER_Y}" r="7" class="gauge-pivot" />
   `;
 }
 
-export function renderGauge(result: ReadinessResult): string {
+/**
+ * Renders a fading trail of past days' needle positions, oldest (dimmest) to
+ * most recent (brightest), so today's needle reads against where it came from.
+ * `trail` is ordered most-recent-first (index 0 = yesterday).
+ */
+function renderTrail(trail: ReadinessCode[]): string {
+  const [minOpacity, maxOpacity] = TRAIL_OPACITY_RANGE;
+  const oldestFirst = [...trail].reverse();
+
+  return oldestFirst
+    .map((code, i) => {
+      const tip = needleTip(code, TRAIL_NEEDLE_LENGTH);
+      if (!tip) return '';
+
+      const t = oldestFirst.length > 1 ? i / (oldestFirst.length - 1) : 1;
+      const opacity = minOpacity + t * (maxOpacity - minOpacity);
+      return `<line x1="${CENTER_X}" y1="${CENTER_Y}" x2="${tip.x.toFixed(2)}" y2="${tip.y.toFixed(2)}"
+          class="gauge-needle-trail" stroke-width="2.5" stroke-linecap="round" stroke-opacity="${opacity.toFixed(2)}" />`;
+    })
+    .join('');
+}
+
+/** `trail` holds up to a few previous days' readiness codes, most-recent-first (index 0 = yesterday). */
+export function renderGauge(result: ReadinessResult, trail: ReadinessCode[] = []): string {
   return `
     <svg viewBox="0 0 220 130" class="gauge" role="img" aria-label="Readiness gauge: ${result.label}">
       ${renderZones()}
+      ${renderTrail(trail)}
       ${renderNeedle(result.code)}
     </svg>
   `;

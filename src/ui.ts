@@ -1,7 +1,7 @@
 import { renderGauge } from './gauge';
 import { DEFAULT_SETTINGS } from './settings';
 import { renderTrendChart } from './trendChart';
-import type { HrvMetricDisplay, ReadinessResult, Settings, WellnessRow } from './types';
+import type { AdviceStatus, HrvMetricDisplay, ReadinessCode, ReadinessResult, Settings, WellnessRow } from './types';
 
 function escapeHtml(value: string): string {
   return value
@@ -173,8 +173,10 @@ export interface DashboardData {
   settings: Settings;
   rows: WellnessRow[];
   result: ReadinessResult;
-  /** Set when sendTrainingAdvice was on but the write to intervals.icu failed. */
-  adviceError: string | null;
+  /** Previous days' readiness codes, most-recent-first, faded into the gauge as a trail. */
+  trail: ReadinessCode[];
+  /** Outcome of trying to sync today's readiness to intervals.icu. */
+  adviceStatus: AdviceStatus;
 }
 
 interface DashboardHandlers {
@@ -186,8 +188,21 @@ function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
   return settings.hrvMetricsToShow === 'both' || settings.hrvMetricsToShow === metric;
 }
 
+function renderAdviceBanner(status: AdviceStatus): string {
+  switch (status.kind) {
+    case 'sent':
+      return '<p class="banner banner-ok">Training advice sent to intervals.icu.</p>';
+    case 'already-set':
+      return '<p class="banner banner-info">Training advice already set for today.</p>';
+    case 'error':
+      return `<p class="banner banner-warning">Could not update intervals.icu: ${escapeHtml(status.message)}</p>`;
+    case 'disabled':
+      return '';
+  }
+}
+
 export function renderDashboard(container: HTMLElement, data: DashboardData, handlers: DashboardHandlers): void {
-  const { settings, rows, result, adviceError } = data;
+  const { settings, rows, result, trail, adviceStatus } = data;
   const [todayRow, yesterdayRow] = rows;
   const showRmssd = showsMetric('rmssd', settings);
   const showSdnn = showsMetric('sdnn', settings);
@@ -217,7 +232,7 @@ export function renderDashboard(container: HTMLElement, data: DashboardData, han
 
       <main>
         <section class="status-card">
-          ${renderGauge(result)}
+          ${renderGauge(result, trail)}
           <div class="status-badge" style="--status-color: ${result.color}">${escapeHtml(result.label)}</div>
           <div class="status-detail">
             <div>${escapeHtml(result.detail[0])}</div>
@@ -225,8 +240,7 @@ export function renderDashboard(container: HTMLElement, data: DashboardData, han
           </div>
         </section>
 
-        ${adviceError ? `<p class="banner banner-warning">Could not update intervals.icu: ${escapeHtml(adviceError)}</p>` : ''}
-        ${settings.sendTrainingAdvice && !adviceError ? '<p class="banner banner-ok">Training advice sent to intervals.icu.</p>' : ''}
+        ${renderAdviceBanner(adviceStatus)}
 
         <section class="stats-card">
           <table class="stats-table">

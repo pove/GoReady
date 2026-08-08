@@ -26,12 +26,14 @@ export interface Settings {
 
 export type HrvMetricDisplay = 'rmssd' | 'sdnn' | 'both';
 
-/** One day of wellness data as read from intervals.icu. Missing values are NaN. */
+/** One day of wellness data as read from intervals.icu. Missing numeric values are NaN. */
 export interface WellnessRow {
   date: string; // 'YYYY-MM-DD'
   rhr: number;
   rmssd: number;
   sdnn: number;
+  /** Raw "TrainingAdvice" field value already stored on intervals.icu for this day, if any. */
+  trainingAdvice: string;
 }
 
 /** Readiness codes, ordered worst (1) to best (6). 7 means "no data". */
@@ -46,3 +48,10 @@ export interface ReadinessResult {
   /** Value to PUT to intervals.icu's "TrainingAdvice" field, or null when there is nothing to send. */
   adviceCode: number | null;
 }
+
+/** Outcome of trying to sync today's readiness to intervals.icu's "TrainingAdvice" field. */
+export type AdviceStatus =
+  | { kind: 'disabled' }
+  | { kind: 'already-set' }
+  | { kind: 'sent' }
+  | { kind: 'error'; message: string };

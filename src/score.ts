@@ -23,10 +23,9 @@ const ADVICE_CODE_BY_READINESS: Record<ReadinessCode, number | null> = {
   7: null,
 };
 
-/** z-scores of today's rMSSD-derived HRV and RHR against their trailing 30-day window. */
-function computeTodayZScores(rows: WellnessRow[]): { hrvZ: number; rhrZ: number } {
-  const windowSize = Math.min(30, rows.length);
-  const window = rows.slice(0, windowSize);
+/** z-scores of the rMSSD-derived HRV and RHR at `rows[index]` against its trailing 30-day window. */
+function computeZScoresAt(rows: WellnessRow[], index: number): { hrvZ: number; rhrZ: number } {
+  const window = rows.slice(index, Math.min(index + 30, rows.length));
 
   const hrvValues = window.map((row) => 20 * Math.log(row.rmssd));
   const rhrValues = window.map((row) => row.rhr);
@@ -83,7 +82,7 @@ const NO_DATA_RESULT: ReadinessResult = {
 export function computeReadiness(rows: WellnessRow[]): ReadinessResult {
   if (rows.length === 0) return NO_DATA_RESULT;
 
-  const { hrvZ, rhrZ } = computeTodayZScores(rows);
+  const { hrvZ, rhrZ } = computeZScoresAt(rows, 0);
   const { code, label, detail } = classify(hrvZ, rhrZ);
 
   // rMSSD was measured today but there's no variability in the trailing window
@@ -94,4 +93,18 @@ export function computeReadiness(rows: WellnessRow[]): ReadinessResult {
     : detail;
 
   return { code, label, detail: finalDetail, color: ZONE_COLORS[code], adviceCode: ADVICE_CODE_BY_READINESS[code] };
+}
+
+/**
+ * Readiness codes for the days before today (index 0 = yesterday, 1 = the day
+ * before, ...), for drawing a fading trail of past needle positions on the gauge.
+ */
+export function computeReadinessTrail(rows: WellnessRow[], days: number): ReadinessCode[] {
+  const trailLength = Math.min(days, Math.max(rows.length - 1, 0));
+  const codes: ReadinessCode[] = [];
+  for (let i = 1; i <= trailLength; i++) {
+    const { hrvZ, rhrZ } = computeZScoresAt(rows, i);
+    codes.push(classify(hrvZ, rhrZ).code);
+  }
+  return codes;
 }

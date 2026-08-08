@@ -1,3 +1,4 @@
+import { TRAINING_ADVICE_FIELD } from './constants';
 import type { Settings, WellnessRow } from './types';
 
 /** Parses a simple comma-separated table (as returned by intervals.icu) into header/row records. */
@@ -32,6 +33,7 @@ export function parseWellnessCsv(csvText: string, settings: Settings): WellnessR
     rhr: toNumber(row[settings.fieldRHR]),
     rmssd: toNumber(row[settings.fieldRMSSD]),
     sdnn: toNumber(row[settings.fieldSDNN]),
+    trainingAdvice: (row[TRAINING_ADVICE_FIELD] ?? '').trim(),
   }));
 
   return rows
