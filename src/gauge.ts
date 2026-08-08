@@ -24,6 +24,14 @@ const CENTER_X = VIEWBOX_SIZE / 2;
 const CENTER_Y = VIEWBOX_SIZE / 2;
 /** Pixels per z-score unit; the plotted radius ranges from (RADIUS_OFFSET - Z_LIMIT) to (RADIUS_OFFSET + Z_LIMIT) units. */
 const SCALE = 11;
+/**
+ * Rendered viewBox height, cropped short of VIEWBOX_SIZE: the bottom wedge
+ * (see the class doc above) means nothing is ever drawn below roughly
+ * CENTER_Y + outer-radius * cos(45deg) =~ 189 units, so a full square
+ * viewBox left a dead strip of blank space between the gauge and whatever
+ * follows it.
+ */
+const VIEWBOX_HEIGHT = 195;
 
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
@@ -196,7 +204,7 @@ function renderToday(today: ZScorePoint, color: string): string {
  */
 export function renderGauge(result: ReadinessResult, today: ZScorePoint, trail: ZScorePoint[] = []): string {
   return `
-    <svg viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" class="gauge" role="img" aria-label="Readiness gauge: ${result.label}">
+    <svg viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_HEIGHT}" class="gauge" role="img" aria-label="Readiness gauge: ${result.label}">
       ${renderZones()}
       ${renderGrid()}
       ${renderTrail(trail)}

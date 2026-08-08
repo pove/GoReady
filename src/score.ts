@@ -45,15 +45,20 @@ interface LegendEntry {
 
 /**
  * Meaning of each non-"no data" readiness code, worst to best, for the gauge
- * legend. Code 3 fires from two different branches of `classify()` (very low
- * RHR with acute-fatigue signs, labeled "LIT!"; or moderate RHR with
- * incomplete HRV recovery, labeled "LIT") that share a color, so the legend
- * shows both label variants in one row rather than picking just one.
+ * legend. This is deliberately NOT just the literal `classify()` label for
+ * each code: code 3 fires from two different branches (very low RHR with
+ * acute-fatigue signs, or moderate RHR with incomplete HRV recovery) that
+ * display as "LIT!" or "LIT" depending on which one fired, and "LIT" is
+ * *also* code 2's own, different, always-exact label. Reusing either string
+ * for code 3's row would either collide with code 2's row or force two
+ * "LIT"-ish rows to differ only by a "!" - both read as confusing/wrong. So
+ * code 3 gets its own plain-English name instead, and "LIT" is left as
+ * code 2's alone, matching the original chart's own wording for that zone.
  */
 export const READINESS_LEGEND: LegendEntry[] = [
   { code: 6, label: 'REST!', description: 'Illness or stress detected' },
   { code: 5, label: 'Rest', description: 'Time to recover' },
-  { code: 3, label: 'LIT / LIT!', description: 'Recovery is not complete' },
+  { code: 3, label: 'Limit intensity', description: "Recovery isn't complete" },
   { code: 2, label: 'LIT', description: 'Low intensity training' },
   { code: 4, label: 'Normal', description: 'Train as planned' },
   { code: 1, label: 'HIT', description: 'Ready for intensive training' },

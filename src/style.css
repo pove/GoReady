@@ -7,6 +7,12 @@
   --color-accent: #14532d;
   --color-accent-contrast: #ffffff;
   --radius: 14px;
+  /* Gauge zone colors (ZONE_COLORS) are always light/pastel by design, in
+     both themes, so ink drawn on top of them (grid lines, zone borders, the
+     trail, the center label) stays a fixed dark color instead of following
+     var(--color-text) - which turns near-white in dark mode and all but
+     disappears against those same light zones. */
+  --gauge-ink: #111827;
   color-scheme: light;
 }
 
@@ -143,53 +149,47 @@ main {
   display: block;
 }
 
-/* var(--color-text) already flips per theme, so the grid, trail and today's
-   halo read correctly against the card in both light and dark without their
-   own dark/light overrides. */
 .gauge-zone {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-opacity: 0.15;
   stroke-width: 1;
 }
 
 .gauge-grid-line {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-opacity: 0.25;
   stroke-width: 1;
 }
 
 .gauge-trail-line {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-opacity: 0.35;
   stroke-width: 1;
 }
 
 .gauge-trail-dot {
-  fill: var(--color-text);
+  fill: var(--gauge-ink);
   stroke: none;
 }
 
 .gauge-today-halo {
   fill: var(--color-surface);
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-width: 1.5;
 }
 
 .gauge-today-dot {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-width: 1.5;
 }
 
-/* Zone colors are always light/pastel by design (see ZONE_COLORS), so the
-   center badge's text stays a fixed dark color in both themes rather than
-   following var(--color-text). */
 .gauge-center-badge {
   stroke: var(--color-surface);
   stroke-width: 3;
 }
 
 .gauge-center-label {
-  fill: #111827;
+  fill: var(--gauge-ink);
   font-size: 12px;
   font-weight: 700;
 }
