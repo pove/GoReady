@@ -65,7 +65,7 @@ async function loadDashboard(): Promise<void> {
       { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard() },
     );
   } catch (error) {
-    showError(app!, describeError(error), () => void loadDashboard());
+    showError(app!, describeError(error), { onRetry: () => void loadDashboard(), onSettings: () => openSettings(false) });
   }
 }
 

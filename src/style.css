@@ -90,14 +90,14 @@ main {
 /* Status card */
 
 .status-card {
-  background: var(--status-color, var(--color-surface));
+  background: var(--color-surface);
   border-radius: var(--radius);
   padding: 1.25rem 1rem 1.5rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #111827;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .gauge {
@@ -107,16 +107,24 @@ main {
   display: block;
 }
 
-.status-label {
-  font-size: 2rem;
+.status-badge {
+  display: inline-block;
+  background: var(--status-color, var(--color-border));
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #111827;
+  font-size: 1.75rem;
   font-weight: 700;
-  margin-top: -0.5rem;
+  line-height: 1.2;
+  padding: 0.3rem 1.25rem;
+  border-radius: 999px;
+  margin-top: -0.25rem;
 }
 
 .status-detail {
   font-size: 0.95rem;
-  opacity: 0.85;
+  color: var(--color-text-muted);
   line-height: 1.4;
+  margin-top: 0.5rem;
 }
 
 .banner {
@@ -265,7 +273,8 @@ main {
 
 .settings-form input[type='text'],
 .settings-form input[type='password'],
-.settings-form input[type='number'] {
+.settings-form input[type='number'],
+.settings-form select {
   width: 100%;
   padding: 0.55rem 0.6rem;
   margin-top: 0.25rem;
