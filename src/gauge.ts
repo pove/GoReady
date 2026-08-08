@@ -33,13 +33,16 @@ const SCALE = 11;
  * painted point is a wedge tip at rhrZ = +-Z_LIMIT, hrvZ = -Z_LIMIT, using
  * the same `y = CENTER_Y - radius * cos(theta)` formula as zScoreToPoint:
  *   CENTER_Y - (RADIUS_OFFSET + Z_LIMIT) * SCALE * cos(135deg) = 180.
- * Today's marker can sit on that same tip and draws a halo of radius 9
- * around it, so the real lower bound is 189; round up for stroke width.
+ * Today's marker can sit on that same tip and draws a halo of radius
+ * TODAY_HALO_RADIUS around it, so the real lower bound is
+ * 180 + TODAY_HALO_RADIUS + half its stroke width; round up from there.
  */
-const VIEWBOX_HEIGHT = 191;
+const VIEWBOX_HEIGHT = 189;
 
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
+const TODAY_HALO_RADIUS = 7;
+const TODAY_DOT_RADIUS = 4.5;
 
 function clampZ(z: number): number {
   return Math.max(-Z_LIMIT, Math.min(Z_LIMIT, z));
@@ -192,8 +195,8 @@ function renderToday(today: ZScorePoint, color: string): string {
 
   const { x, y } = zScoreToPoint(today.rhrZ, today.hrvZ);
   return `
-    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="9" class="gauge-today-halo" />
-    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="6" fill="${color}" class="gauge-today-dot" />
+    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${TODAY_HALO_RADIUS}" class="gauge-today-halo" />
+    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${TODAY_DOT_RADIUS}" fill="${color}" class="gauge-today-dot" />
   `;
 }
 
