@@ -51,10 +51,11 @@ again on every page load.
 The gauge plots today's HRV/RHR z-scores as a point on a polar chart (angle =
 RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
 chart used, with a fading trail showing where the last several days sat on
-the same chart. A collapsed "What do the zones mean?" panel below the gauge
-spells out what each colored zone means (`HIT`, `Normal`, `LIT`, `LIT!`,
-`Rest`, `REST!`), and a small ⓘ button opens the annotated reference chart
-this app's gauge is based on.
+the same chart. The chart paints five colored bands (not one per readiness
+code — codes 2 and 3 both mean "train easy" and share the orange band). A
+collapsed "What do the zones mean?" panel below the gauge names each band as
+the reference chart itself does (Stress / illness, Rest, Limit intensity,
+Train as planned, HIT), and a small ⓘ button opens that reference chart.
 
 That reference chart also highlights three named regions — "optimum
 pre-race", "not coping well during loading", and "coping well during

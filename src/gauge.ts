@@ -30,8 +30,9 @@ const SCALE = 11;
  * below it.
  *
  * The bottom wedge is missing (see the module doc above), so the lowest
- * painted point is a wedge tip at rhrZ = +-Z_LIMIT, hrvZ = -Z_LIMIT:
- *   CENTER_Y + (RADIUS_OFFSET + Z_LIMIT) * SCALE * cos(135deg) = 180.
+ * painted point is a wedge tip at rhrZ = +-Z_LIMIT, hrvZ = -Z_LIMIT, using
+ * the same `y = CENTER_Y - radius * cos(theta)` formula as zScoreToPoint:
+ *   CENTER_Y - (RADIUS_OFFSET + Z_LIMIT) * SCALE * cos(135deg) = 180.
  * Today's marker can sit on that same tip and draws a halo of radius 9
  * around it, so the real lower bound is 189; round up for stroke width.
  */
@@ -177,7 +178,7 @@ function renderTrail(trail: ZScorePoint[]): string {
   return line + dots;
 }
 
-/** Fills the gauge's empty pole (radius = 0 is unreachable, since z-scores are clamped) with today's result color and label, echoing the status badge below the chart. */
+/** Fills the gauge's empty pole (radius = 0 is unreachable, since z-scores are clamped) with today's result color and label. */
 function renderCenterBadge(result: ReadinessResult): string {
   return `
     <circle cx="${CENTER_X}" cy="${CENTER_Y}" r="29" fill="${result.color}" class="gauge-center-badge" />

@@ -253,8 +253,8 @@ function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
  * Explains what each colored zone on the gauge means, since the chart itself
  * has no room for legible in-place labels at mobile sizes. Tucked behind a
  * `<details>` toggle, closed by default, so it doesn't push the rest of the
- * dashboard down every time - most visits, the badge and detail text below
- * the gauge already say what today's zone means.
+ * dashboard down every time - most visits, the gauge's center label and the
+ * detail text below it already say what today's zone means.
  */
 function renderGaugeLegend(): string {
   const items = READINESS_LEGEND.map(
