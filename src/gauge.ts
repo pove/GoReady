@@ -65,37 +65,44 @@ const ZONES: ZoneRect[] = [
   { rhrRange: [-1, 1], hrvRange: [1, 3], color: ZONE_COLORS[1] }, // HIT
 ];
 
-/** Vertices per rectangle edge when sampling a zone's boundary; enough for the curved edges the polar mapping produces to look smooth. */
-const ZONE_EDGE_STEPS = 12;
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
+/** Degrees swept between two (already-clamped) RHR z-scores; >180 needs the SVG large-arc flag. */
+function angularSpanDeg(rhrLo: number, rhrHi: number): number {
+  return ((clampZ(rhrHi) - clampZ(rhrLo)) / Z_LIMIT) * (ANG_LIMIT * (180 / Math.PI));
 }
 
-/** Samples a (rhr, hrv) rectangle's boundary and maps it through `zScoreToPoint`, producing the SVG points for a curved zone polygon. */
-function zonePolygonPoints(rhrRange: [number, number], hrvRange: [number, number]): string {
+/**
+ * Builds a zone's exact boundary as an SVG path: two true circular arcs (the
+ * inner and outer HRV radii) joined by two straight radial edges (the RHR
+ * limits are literally straight lines from the pole outward). This is exact,
+ * unlike sampling the rectangle's edges into a many-sided polygon, which
+ * visibly facets the widest zones (e.g. the background zone sweeps a full
+ * 270 degrees).
+ */
+function zonePath(rhrRange: [number, number], hrvRange: [number, number]): string {
   const [rhrLo, rhrHi] = rhrRange;
   const [hrvLo, hrvHi] = hrvRange;
-  const points: { x: number; y: number }[] = [];
 
-  const walk = (from: number, to: number, fixed: number, varyingRhr: boolean) => {
-    for (let i = 0; i <= ZONE_EDGE_STEPS; i++) {
-      const value = lerp(from, to, i / ZONE_EDGE_STEPS);
-      points.push(varyingRhr ? zScoreToPoint(value, fixed) : zScoreToPoint(fixed, value));
-    }
-  };
+  const innerRadius = (RADIUS_OFFSET - clampZ(hrvHi)) * SCALE; // higher HRV -> smaller radius
+  const outerRadius = (RADIUS_OFFSET - clampZ(hrvLo)) * SCALE;
+  const largeArc = angularSpanDeg(rhrLo, rhrHi) > 180 ? 1 : 0;
 
-  walk(rhrLo, rhrHi, hrvLo, true); // bottom edge, rhr increasing
-  walk(hrvLo, hrvHi, rhrHi, false); // right edge, hrv increasing
-  walk(rhrHi, rhrLo, hrvHi, true); // top edge, rhr decreasing
-  walk(hrvHi, hrvLo, rhrLo, false); // left edge, hrv decreasing
+  const innerStart = zScoreToPoint(rhrLo, hrvHi);
+  const innerEnd = zScoreToPoint(rhrHi, hrvHi);
+  const outerEnd = zScoreToPoint(rhrHi, hrvLo);
+  const outerStart = zScoreToPoint(rhrLo, hrvLo);
 
-  return points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+  return [
+    `M ${innerStart.x.toFixed(2)} ${innerStart.y.toFixed(2)}`,
+    `A ${innerRadius.toFixed(2)} ${innerRadius.toFixed(2)} 0 ${largeArc} 1 ${innerEnd.x.toFixed(2)} ${innerEnd.y.toFixed(2)}`,
+    `L ${outerEnd.x.toFixed(2)} ${outerEnd.y.toFixed(2)}`,
+    `A ${outerRadius.toFixed(2)} ${outerRadius.toFixed(2)} 0 ${largeArc} 0 ${outerStart.x.toFixed(2)} ${outerStart.y.toFixed(2)}`,
+    'Z',
+  ].join(' ');
 }
 
 function renderZones(): string {
   return ZONES.map(
-    (zone) => `<polygon points="${zonePolygonPoints(zone.rhrRange, zone.hrvRange)}" fill="${zone.color}" class="gauge-zone" />`,
+    (zone) => `<path d="${zonePath(zone.rhrRange, zone.hrvRange)}" fill="${zone.color}" class="gauge-zone" />`,
   ).join('');
 }
 
