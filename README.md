@@ -15,11 +15,6 @@ on the intervals.icu forum — see the
 ["How-to guide: ImReady4 app for HRV-guided training"](https://forum.intervals.icu/t/how-to-guide-imready4-app-for-hrv-guided-training/25778)
 thread. All credit for the underlying method goes to them.
 
-There is no backend and no account system — it's a static single-page app.
-Your intervals.icu API key is kept in the browser's `sessionStorage` only
-(cleared when the tab closes) and is never sent anywhere except intervals.icu
-itself, via the small PHP proxy described below.
-
 ## How it works
 
 ```
@@ -31,6 +26,11 @@ different origin because of CORS. `proxy/proxy.php` is a small, stateless
 reverse proxy: it forwards whatever `Authorization` header and body the app
 sends, straight through to `https://intervals.icu/api/v1/...`, and forwards
 the response back. It never stores or reads your API key itself.
+
+There is no backend and no account system — it's a static single-page app.
+Your intervals.icu API key is kept in the browser's `sessionStorage` only
+(cleared when the tab closes) and is never sent anywhere except intervals.icu
+itself, via the small PHP proxy described below.
 
 ## Readiness algorithm
 
