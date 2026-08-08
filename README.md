@@ -38,12 +38,16 @@ For each of rMSSD and resting HR, today's value is turned into a z-score
 against the trailing 30-day mean/standard deviation (rMSSD is first
 log-transformed: `20 * ln(rMSSD)`, same as the original script). Those two
 z-scores are run through the same decision tree as the MATLAB version to
-produce one of: `HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`, or "no data".
-That result maps to a `TrainingAdvice` code (1-4) that gets written back to
-intervals.icu when "Write today's readiness back to intervals.icu" is enabled
-in settings. If intervals.icu already has a `TrainingAdvice` value for today
-(e.g. from an earlier refresh), GoReady leaves it alone instead of writing it
-again on every page load.
+produce one of: `HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`, or a seventh
+"no data" state (shown on screen as `...?`, when today has no HRV
+measurement or the trailing window has zero variability). Each of the six
+real results maps to a `TrainingAdvice` code from 1 (worst) to 4 (best); "no
+data" isn't one of them — it clears the field instead, sending an empty
+value rather than a number. That value gets written back to intervals.icu
+when "Write today's readiness back to intervals.icu" is enabled in settings.
+If intervals.icu already has a `TrainingAdvice` value for today (e.g. from
+an earlier refresh), GoReady leaves it alone instead of writing it again on
+every page load.
 
 The gauge plots today's HRV/RHR z-scores as a point on a polar chart (angle =
 RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
