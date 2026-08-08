@@ -10,7 +10,7 @@ import {
   validCount,
   weakerConfidence,
   windowAt,
-  type BaselineConfidence,
+  type ReadinessConfidence,
 } from './baseline';
 import { READINESS_WINDOW_DAYS } from './score';
 import { populationStd } from './stats';
@@ -55,7 +55,7 @@ export interface InsightInput {
    * `buildInsights` - because every other rule measures its own window and
    * guards on that instead.
    */
-  confidence: BaselineConfidence;
+  confidence: ReadinessConfidence;
 }
 
 /** Most insights the status card will show at once. */
@@ -531,7 +531,7 @@ export function buildInsights(input: InsightInput): Insight[] {
   // baseline those z-scores are arithmetically degenerate - two days cap them at
   // |z| = 1 - and "HRV is strong" would be an unsupported claim sitting directly
   // under a badge saying the baseline cannot support claims.
-  const phase = confidence.tier === 'unusable' ? null : trainingPhaseNote(code, hrvZ, rhrZ);
+  const phase = confidence.overall.tier === 'unusable' ? null : trainingPhaseNote(code, hrvZ, rhrZ);
   if (phase) candidates.push({ id: 'phase-note', tone: 'note', text: phase });
 
   const fired = candidates.filter((insight): insight is Insight => insight !== null);
@@ -550,12 +550,12 @@ export function buildInsights(input: InsightInput): Insight[] {
 
 /**
  * Confidence in today's readiness score, judged on how much history actually
- * backs the z-scores behind it. Both metrics matter: a readiness zone needs the
- * HRV and the resting HR z-score to reach it together.
+ * backs the z-scores behind it. Both axes are kept, not just their combined
+ * headline number: `unreachableBands` needs to reason about HRV and resting HR
+ * separately, since a thin baseline on one axis does not restrict the other.
  */
-export function readinessConfidence(rows: WellnessRow[], windowDays = READINESS_WINDOW_DAYS): BaselineConfidence {
-  return weakerConfidence(
-    baselineConfidence(rows.map((r) => lnHrv(r.rmssd)), windowDays),
-    baselineConfidence(rows.map((r) => r.rhr), windowDays),
-  );
+export function readinessConfidence(rows: WellnessRow[], windowDays = READINESS_WINDOW_DAYS): ReadinessConfidence {
+  const hrv = baselineConfidence(rows.map((r) => lnHrv(r.rmssd)), windowDays);
+  const rhr = baselineConfidence(rows.map((r) => r.rhr), windowDays);
+  return { hrv, rhr, overall: weakerConfidence(hrv, rhr) };
 }

@@ -1,4 +1,4 @@
-import { unreachableBands, type BaselineConfidence } from './baseline';
+import { unreachableBands, type ReadinessConfidence } from './baseline';
 import { renderGauge } from './gauge';
 import { buildInsights, type Insight } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
@@ -239,7 +239,7 @@ export interface DashboardData {
   /** Outcome of trying to sync today's readiness to intervals.icu. */
   adviceStatus: AdviceStatus;
   /** How much history actually backs today's z-scores. Display-only. */
-  confidence: BaselineConfidence;
+  confidence: ReadinessConfidence;
 }
 
 interface DashboardHandlers {
@@ -283,12 +283,13 @@ function renderGaugeLegend(): string {
  * `maxReachableZ`), and "we cannot reach the Rest zone from here" is a far more
  * useful thing to read than a vague low-confidence hedge.
  */
-function renderConfidenceBadge(confidence: BaselineConfidence): string {
-  if (confidence.tier === 'ok') return '';
+function renderConfidenceBadge(confidence: ReadinessConfidence): string {
+  const { overall } = confidence;
+  if (overall.tier === 'ok') return '';
 
-  const counts = `Baseline: ${confidence.validDays} of the last ${confidence.windowDays} days measured.`;
+  const counts = `Baseline: ${overall.validDays} of the last ${overall.windowDays} days measured.`;
 
-  if (confidence.tier === 'limited') {
+  if (overall.tier === 'limited') {
     return `<p class="confidence-badge">${escapeHtml(`${counts} Today's score is provisional until there is more history.`)}</p>`;
   }
 

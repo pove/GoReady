@@ -88,9 +88,34 @@ describe('baselineConfidence', () => {
 });
 
 describe('unreachableBands', () => {
-  it('reports every band when two days cap the score at |z| = 1', () => {
+  /** Both axes equally thin/rich, for cases that aren't about the asymmetric bug below. */
+  const symmetric = (n: number) => {
+    const confidence = baselineConfidence(Array(n).fill(50), 30);
+    return { hrv: confidence, rhr: confidence, overall: confidence };
+  };
+
+  it('reports every band when two days cap both axes at |z| = 1', () => {
     // At maxReachableZ = 1 nothing but "Train as planned" is reachable.
-    expect(unreachableBands(baselineConfidence([50, 60], 30))).toEqual([
+    expect(unreachableBands(symmetric(2))).toEqual(['Stress / illness', 'Rest', 'Limit intensity', 'HIT']);
+  });
+
+  it('frees the bands up as history accumulates on both axes', () => {
+    // sqrt(3) = 1.73 clears HIT/Limit intensity (> 1) and Stress (> 1.7), not Rest (>= 2).
+    expect(unreachableBands(symmetric(4))).toEqual(['Rest']);
+    // sqrt(4) = 2 reaches everything.
+    expect(unreachableBands(symmetric(5))).toEqual([]);
+  });
+
+  it('reports every band when either axis alone has no z-score at all', () => {
+    const rich = baselineConfidence(Array(30).fill(50), 30);
+    const empty = baselineConfidence([NaN, NaN], 30); // classify() would return "no data" regardless of the other axis
+    expect(unreachableBands({ hrv: rich, rhr: empty, overall: empty })).toEqual([
+      'Stress / illness',
+      'Rest',
+      'Limit intensity',
+      'HIT',
+    ]);
+    expect(unreachableBands({ hrv: empty, rhr: rich, overall: empty })).toEqual([
       'Stress / illness',
       'Rest',
       'Limit intensity',
@@ -98,12 +123,44 @@ describe('unreachableBands', () => {
     ]);
   });
 
-  it('frees the bands up as history accumulates', () => {
-    const at = (n: number) => unreachableBands(baselineConfidence(Array(n).fill(50), 30));
-    // sqrt(3) = 1.73 clears HIT/Limit intensity (> 1) and Stress (> 1.7), not Rest (>= 2).
-    expect(at(4)).toEqual(['Rest']);
-    // sqrt(4) = 2 reaches everything.
-    expect(at(5)).toEqual([]);
+  // Regression: this used to collapse both axes into whichever was weaker and
+  // apply a single-axis test to that one number. HIT needs a LARGE hrvZ but
+  // only a SMALL |rhrZ| (within (-1, 1]), so a thin RHR baseline barely
+  // constrains it - the collapsed version wrongly reported HIT unreachable
+  // here even though computeReadiness (see the test below) genuinely returns
+  // it, a direct contradiction between the badge and the gauge next to it.
+  it('does not let a thin RHR baseline hide a HIT that a rich HRV baseline can reach', () => {
+    const richHrv = baselineConfidence(Array(30).fill(50), 30);
+    const thinRhr = baselineConfidence([60, 50], 30); // exactly 2 valid days
+    expect(unreachableBands({ hrv: richHrv, rhr: thinRhr, overall: thinRhr })).not.toContain('HIT');
+  });
+
+  // And the mirror image: a thin HRV baseline genuinely does rule HIT out,
+  // regardless of how much RHR history exists, since HIT needs hrvZ > 1.
+  it('still rules out HIT when it is the HRV baseline that is thin', () => {
+    const thinHrv = baselineConfidence([60, 50], 30);
+    const richRhr = baselineConfidence(Array(30).fill(50), 30);
+    expect(unreachableBands({ hrv: thinHrv, rhr: richRhr, overall: thinHrv })).toContain('HIT');
+  });
+});
+
+// The scenario the regression test above is built from: a genuine HIT produced
+// from a rich HRV baseline and a bare two-day RHR baseline, checked end to end
+// against the actual score - not just the reachability table in isolation.
+describe('a HIT produced from an asymmetric baseline', () => {
+  const rows = wellnessSeries(30, (daysAgo) => ({
+    rhr: daysAgo === 0 ? 60 : daysAgo === 1 ? 50 : NaN, // only 2 valid RHR days
+    rmssd: daysAgo === 0 ? 95 : 50, // rich HRV baseline, today's HRV comfortably elevated
+  }));
+
+  it('computeReadiness genuinely returns HIT', () => {
+    expect(computeReadiness(rows)).toMatchObject({ code: 1, label: 'HIT' });
+  });
+
+  it('unreachableBands agrees that HIT is reachable', () => {
+    const hrv = baselineConfidence(rows.map((r) => lnHrv(r.rmssd)), 30);
+    const rhr = baselineConfidence(rows.map((r) => r.rhr), 30);
+    expect(unreachableBands({ hrv, rhr, overall: weakerConfidence(hrv, rhr) })).not.toContain('HIT');
   });
 });
 

@@ -115,33 +115,82 @@ export function baselineConfidence(valuesNewestFirst: number[], windowDays: numb
 }
 
 /**
- * The weaker of two per-metric confidences. A readiness zone needs both the HRV
- * and the resting HR z-score to reach it, so the thinner of the two baselines is
- * what actually limits the score.
+ * The weaker of two per-metric confidences - what the confidence badge's tier
+ * and "N of M days measured" headline are based on, since a readiness zone
+ * needs both the HRV and the resting HR z-score to reach it, so the thinner of
+ * the two baselines is what actually limits the score.
+ *
+ * This single number is NOT what decides which specific bands are reachable,
+ * though - see `unreachableBands`, which needs the two axes kept separate.
  */
 export function weakerConfidence(a: BaselineConfidence, b: BaselineConfidence): BaselineConfidence {
   return a.maxReachableZ <= b.maxReachableZ ? a : b;
 }
 
+/** Per-metric confidence for both axes behind the readiness score, plus the weaker one for headline display. */
+export interface ReadinessConfidence {
+  hrv: BaselineConfidence;
+  rhr: BaselineConfidence;
+  /** The weaker of the two - see `weakerConfidence`. */
+  overall: BaselineConfidence;
+}
+
 /**
- * Whether each gauge band is reachable at a given `maxReachableZ`, read straight
- * off the branch conditions in `classify()`. Listed worst band to best, as the
- * in-app legend lists them, and named the same way.
+ * Whether each gauge band is reachable, given how far each axis can move -
+ * `hrvZ` up to `hrv.maxReachableZ`, `rhrZ` up to `rhr.maxReachableZ` - read
+ * straight off the branch conditions in `classify()`. Listed worst band to
+ * best, as the in-app legend lists them, and named the same way.
  *
- * The inequalities match `classify()` exactly, strictness included: HIT needs
- * `hrvZ > 1`, so a baseline capped at exactly 1 cannot produce it, while Rest
- * needs `rhrZ <= -2` and a cap of exactly 2 can.
+ * The two axes come from independent wellness columns with their own separate
+ * history, so a band is reachable exactly when SOME achievable hrvZ and SOME
+ * achievable rhrZ together satisfy one of `classify()`'s branches for that
+ * band - not when a single collapsed "weaker of the two" number clears every
+ * band's threshold, which is what this used to do and which contradicted the
+ * gauge: HIT needs a LARGE hrvZ but only a SMALL |rhrZ| (within (-1, 1]), so a
+ * thin RHR baseline barely constrains it - even two days of RHR history can
+ * land exactly on rhrZ = 1, which satisfies HIT's resting-HR condition
+ * outright. A rich HRV baseline plus a 2-day RHR baseline can and does produce
+ * a genuine HIT, so gating HIT's reachability on the RHR side's richness (as
+ * "weaker of the two" did) had it backwards.
+ *
+ * Each predicate reflects that difference directly: a branch that needs a
+ * LARGE |z| on some axis is gated on that axis's own richness (`maxZ` past the
+ * branch's threshold), while a branch that only needs a value INSIDE a
+ * moderate range - as HIT's rhrZ, or the "hrvZ >= -1" / "rhrZ in (-2, 1.7]"
+ * sides of the Limit-intensity branches - is satisfiable from even the
+ * thinnest non-empty baseline, so it is not gated on richness at all.
  */
-const BAND_REACHABILITY: { label: string; reachable: (maxZ: number) => boolean }[] = [
-  { label: 'Stress / illness', reachable: (z) => z > 1.7 }, // rhrZ > 1.7 and hrvZ < -1
-  { label: 'Rest', reachable: (z) => z >= 2 }, // rhrZ <= -2 and hrvZ < -1
-  { label: 'Limit intensity', reachable: (z) => z > 1 }, // reachable via hrvZ < -1
-  { label: 'HIT', reachable: (z) => z > 1 }, // hrvZ > 1
+const BAND_REACHABILITY: { label: string; reachable: (hrv: BaselineConfidence, rhr: BaselineConfidence) => boolean }[] = [
+  {
+    label: 'Stress / illness', // rhrZ > 1.7 and hrvZ < -1
+    reachable: (hrv, rhr) => rhr.maxReachableZ > 1.7 && hrv.maxReachableZ > 1,
+  },
+  {
+    label: 'Rest', // rhrZ <= -2 and hrvZ < -1
+    reachable: (hrv, rhr) => rhr.maxReachableZ >= 2 && hrv.maxReachableZ > 1,
+  },
+  {
+    label: 'Limit intensity', // via rhrZ >= 1.7 (hrvZ >= -1 asks nothing more of HRV) or hrvZ < -1 (rhrZ in (-2, 1.7] asks nothing more of RHR)
+    reachable: (hrv, rhr) => rhr.maxReachableZ >= 1.7 || hrv.maxReachableZ > 1,
+  },
+  {
+    label: 'HIT', // hrvZ > 1; rhrZ only has to land in (-1, 1], which any non-empty RHR baseline can do
+    reachable: (hrv) => hrv.maxReachableZ > 1,
+  },
 ];
 
 /** Gauge bands the current baseline cannot produce, named as the in-app legend names them. */
-export function unreachableBands(confidence: BaselineConfidence): string[] {
-  return BAND_REACHABILITY.filter(({ reachable }) => !reachable(confidence.maxReachableZ)).map(({ label }) => label);
+export function unreachableBands(confidence: ReadinessConfidence): string[] {
+  const { hrv, rhr } = confidence;
+
+  // classify() needs a real z-score on BOTH axes to produce anything but "no
+  // data" - with either axis empty (fewer than two valid days), none of these
+  // bands, or any other, can actually appear.
+  if (hrv.maxReachableZ < 1 || rhr.maxReachableZ < 1) {
+    return BAND_REACHABILITY.map(({ label }) => label);
+  }
+
+  return BAND_REACHABILITY.filter(({ reachable }) => !reachable(hrv, rhr)).map(({ label }) => label);
 }
 
 // ---------------------------------------------------------------------------

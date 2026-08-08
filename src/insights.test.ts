@@ -339,15 +339,18 @@ describe('buildInsights: the phase note against a thin baseline', () => {
 });
 
 describe('readinessConfidence', () => {
-  it('reports the weaker of the two metrics behind the score', () => {
+  it('keeps both metrics, and reports the weaker one as `overall`', () => {
     const rows = wellnessSeries(30, (daysAgo) => ({
       rhr: 50 + wobble(daysAgo),
       rmssd: daysAgo < 3 ? 50 : NaN, // plenty of RHR, almost no HRV
     }));
-    expect(readinessConfidence(rows)).toMatchObject({ validDays: 3, tier: 'unusable' });
+    const confidence = readinessConfidence(rows);
+    expect(confidence.hrv).toMatchObject({ validDays: 3, tier: 'unusable' });
+    expect(confidence.rhr).toMatchObject({ validDays: 30, tier: 'ok' });
+    expect(confidence.overall).toMatchObject({ validDays: 3, tier: 'unusable' });
   });
 
   it('is satisfied by a full month of both', () => {
-    expect(readinessConfidence(series())).toMatchObject({ validDays: 30, tier: 'ok' });
+    expect(readinessConfidence(series()).overall).toMatchObject({ validDays: 30, tier: 'ok' });
   });
 });

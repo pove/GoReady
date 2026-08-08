@@ -71,16 +71,27 @@ window, and nothing in the original algorithm checks how much of that window
 actually holds measurements. Because the standard deviation divides by N, the
 largest `|z|` that N observations can produce is exactly `sqrt(N - 1)` — and
 every threshold in `classify()` sits within `|z| <= 2`. So on a thin baseline
-whole zones are not merely unlikely but arithmetically unreachable:
+whole bands are not merely unlikely but arithmetically unreachable, if both
+axes are equally thin:
 
-| valid days | max abs z | consequence |
+| valid days (both axes) | max abs z | consequence |
 |---|---|---|
-| 2 | 1.00 | every branch unreachable — **always** "Train as planned" |
-| 3 | 1.41 | no `LIT`, `Rest` or `REST!` |
-| 5 | 2.00 | all branches first reachable |
+| 2 | 1.00 | every band unreachable — **always** "Train as planned" |
+| 3 | 1.41 | `Rest` and `Stress / illness` still unreachable; `Limit intensity` and `HIT` already are not |
+| 4 | 1.73 | only `Rest` remains unreachable |
+| 5 | 2.00 | every band reachable |
 | 10 | 3.00 | the gauge's full ±3 range first reachable |
 
-Below 5 measured days the badge says which bands cannot be reached; below 21
+HRV and resting HR keep separate baselines, though, so a thin baseline on one
+axis doesn't restrict the other: `HIT` needs a large HRV z-score but only a
+small resting-HR one (within `(-1, 1]`), so a rich HRV history paired with
+just two days of resting-HR history can still produce a genuine `HIT` — the
+badge's `unreachableBands` check reasons about the two axes independently for
+exactly this reason, rather than judging every band off whichever axis has
+less history.
+
+Below 5 measured days *on either axis* the badge says which bands cannot be
+reached; below 21
 (the three-week minimum the resting-HR literature works to) it marks the score
 provisional. The score itself and the write-back are untouched either way — the
 badge exists so a green "Train as planned" that really means "we cannot tell"
