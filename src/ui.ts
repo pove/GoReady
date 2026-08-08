@@ -324,7 +324,6 @@ export function renderDashboard(
         <section class="status-card">
           <button id="gauge-help-btn" class="icon-btn gauge-help-btn" type="button" aria-label="What does the gauge mean?" title="What does the gauge mean?">&#9432;</button>
           ${renderGauge(result, todayScores, trail)}
-          <div class="status-badge" style="--status-color: ${result.color}">${escapeHtml(result.label)}</div>
           <div class="status-detail">
             <div>${escapeHtml(result.detail[0])}</div>
             <div>${escapeHtml(result.detail[1])}</div>
