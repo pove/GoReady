@@ -1,0 +1,44 @@
+/** User-configurable settings, persisted in sessionStorage (single athlete, no server-side account). */
+export interface Settings {
+  athleteId: string;
+  apiKey: string;
+  /** URL of the PHP (or other) reverse proxy that forwards requests to intervals.icu. */
+  proxyUrl: string;
+  /** Whether to PUT today's readiness code back to intervals.icu as the "TrainingAdvice" wellness field. */
+  sendTrainingAdvice: boolean;
+  /** Window (days) for the short-term moving average shown in trend charts. */
+  daysForShortTermTrend: number;
+  /** Window (days) for the long-term moving average / expected-range band. */
+  daysForLongTermTrend: number;
+  /** How many standard deviations wide the long-term expected-range band is. */
+  stdDevMultiplier: number;
+  /** Show the numeric value above each bar in the trend charts. */
+  showValuesInTrendCharts: boolean;
+  /** intervals.icu wellness field name to read resting HR from. */
+  fieldRHR: string;
+  /** intervals.icu wellness field name to read rMSSD from. */
+  fieldRMSSD: string;
+  /** intervals.icu wellness field name to read SDNN from. */
+  fieldSDNN: string;
+}
+
+/** One day of wellness data as read from intervals.icu. Missing values are NaN. */
+export interface WellnessRow {
+  date: string; // 'YYYY-MM-DD'
+  rhr: number;
+  rmssd: number;
+  sdnn: number;
+}
+
+/** Readiness codes, ordered worst (1) to best (6). 7 means "no data". */
+export type ReadinessCode = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export interface ReadinessResult {
+  code: ReadinessCode;
+  label: string;
+  detail: [string, string];
+  /** CSS color for the status card / gauge needle. */
+  color: string;
+  /** Value to PUT to intervals.icu's "TrainingAdvice" field, or null when there is nothing to send. */
+  adviceCode: number | null;
+}
