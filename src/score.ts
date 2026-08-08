@@ -8,10 +8,17 @@ import type { ReadinessCode, ReadinessResult, WellnessRow, ZScorePoint } from '.
  * README's Credits section.
  */
 
-/** Gauge zone / legend color per readiness code. */
+/**
+ * Gauge zone / legend color per readiness code, worst (6) to best (1):
+ * red -> gray -> orange -> yellow -> light green -> green. LIT (2) used to
+ * be an off-white gray (#e6e6e6) barely one shade apart from Rest's gray
+ * (#dcdcdc) - indistinguishable as legend dots, and nearly invisible against
+ * a light-theme card. Yellow both fixes that and fits the color ramp
+ * between LIT!'s orange and Normal's light green.
+ */
 export const ZONE_COLORS: Record<ReadinessCode, string> = {
   1: '#78f078', // HIT
-  2: '#e6e6e6', // LIT
+  2: '#ffd966', // LIT
   3: '#ffa500', // LIT! / LIT (recovery incomplete)
   4: '#b4f0b4', // Normal
   5: '#dcdcdc', // Rest
