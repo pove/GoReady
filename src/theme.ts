@@ -10,15 +10,15 @@ const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
 };
 
 export function loadTheme(): ThemePreference {
-  const raw = sessionStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(STORAGE_KEY);
   return raw === 'light' || raw === 'dark' ? raw : 'system';
 }
 
 function saveTheme(theme: ThemePreference): void {
   if (theme === 'system') {
-    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
   } else {
-    sessionStorage.setItem(STORAGE_KEY, theme);
+    localStorage.setItem(STORAGE_KEY, theme);
   }
 }
 

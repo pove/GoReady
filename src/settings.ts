@@ -22,7 +22,7 @@ export const DEFAULT_SETTINGS: Settings = {
 const REQUIRED_FIELDS: (keyof Settings)[] = ['athleteId', 'apiKey', 'proxyUrl'];
 
 export function loadSettings(): Settings {
-  const raw = sessionStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return { ...DEFAULT_SETTINGS };
 
   try {
@@ -38,11 +38,11 @@ export function loadSettings(): Settings {
 }
 
 export function saveSettings(settings: Settings): void {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
 export function clearSettings(): void {
-  sessionStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 export function isConfigured(settings: Settings): boolean {
