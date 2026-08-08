@@ -48,8 +48,22 @@ again on every page load.
 The gauge plots today's HRV/RHR z-scores as a point on a polar chart (angle =
 RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
 chart used, with a fading trail showing where the last several days sat on
-the same chart. A legend below the gauge spells out what each colored zone
-means (`HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`).
+the same chart. The chart paints five colored bands (not one per readiness
+code — codes 2 and 3 both mean "train easy" and share the orange band). A
+collapsed "What do the zones mean?" panel below the gauge names each band as
+the reference chart itself does (Stress / illness, Rest, Limit intensity,
+Train as planned, HIT), and a small ⓘ button opens that reference chart.
+
+That reference chart also highlights three named regions — "optimum
+pre-race", "not coping well during loading", and "coping well during
+training blocks" — that don't map to a distinct `TrainingAdvice` code of
+their own; they're refinements *within* the `HIT`/`Normal` zone. When
+today's point falls in one of them, `src/insights.ts` adds a supplementary
+sentence under the status detail text (e.g. "Resting HR is up but HRV is
+still strong - this pattern looks like 'optimum pre-race'"). Those bands are
+this app's own approximate reading of the reference chart's layout, not
+part of the original algorithm, so they only ever add an extra sentence —
+never change the readiness code, color, or the `TrainingAdvice` value.
 
 ## Local development
 
@@ -120,7 +134,8 @@ simplicity trade-off for a single-athlete personal tool, not an oversight.
 - Single athlete only — no coach/multi-athlete menu.
 - No "yesterday's activity" panel (power/HR stream chart, RPE/feel/etc.).
 - The polar readiness chart is an SVG port of the original, sized for a small
-  screen, with a text legend added underneath since the chart itself has no
+  screen, with a collapsed text legend added underneath (and the original
+  chart available on demand via the ⓘ button) since the chart itself has no
   room for legible zone labels at mobile sizes.
 - Time zone handling was dropped — the browser's local time is used directly.
 - UI text is in English regardless of the browser locale.
@@ -132,4 +147,5 @@ npm test
 ```
 
 Unit tests (Vitest) cover the readiness scoring decision tree, the gauge's
-z-score-to-pixel geometry, CSV parsing, and the trend-chart windowing math.
+z-score-to-pixel geometry, the supplementary training-phase notes, CSV
+parsing, and the trend-chart windowing math.

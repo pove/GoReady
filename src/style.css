@@ -7,6 +7,12 @@
   --color-accent: #14532d;
   --color-accent-contrast: #ffffff;
   --radius: 14px;
+  /* Gauge zone colors (ZONE_COLORS) are always light/pastel by design, in
+     both themes, so ink drawn on top of them (grid lines, zone borders, the
+     trail, the center label) stays a fixed dark color instead of following
+     var(--color-text) - which turns near-white in dark mode and all but
+     disappears against those same light zones. */
+  --gauge-ink: #111827;
   color-scheme: light;
 }
 
@@ -107,6 +113,7 @@ main {
 /* Status card */
 
 .status-card {
+  position: relative;
   background: var(--color-surface);
   border-radius: var(--radius);
   padding: 1.25rem 1rem 1.5rem;
@@ -117,6 +124,24 @@ main {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.gauge-help-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  font-size: 1.15rem;
+  padding: 0.15rem;
+  opacity: 0.6;
+}
+
+.status-note {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  line-height: 1.4;
+  margin: 0.6rem 0 0;
+  max-width: 34ch;
+}
+
 .gauge {
   width: 100%;
   max-width: 260px;
@@ -124,60 +149,68 @@ main {
   display: block;
 }
 
-/* var(--color-text) already flips per theme, so the grid, trail and today's
-   halo read correctly against the card in both light and dark without their
-   own dark/light overrides. */
 .gauge-zone {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-opacity: 0.15;
   stroke-width: 1;
 }
 
 .gauge-grid-line {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-opacity: 0.25;
   stroke-width: 1;
 }
 
 .gauge-trail-line {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-opacity: 0.35;
   stroke-width: 1;
 }
 
 .gauge-trail-dot {
-  fill: var(--color-text);
+  fill: var(--gauge-ink);
   stroke: none;
 }
 
 .gauge-today-halo {
   fill: var(--color-surface);
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-width: 1.5;
 }
 
 .gauge-today-dot {
-  stroke: var(--color-text);
+  stroke: var(--gauge-ink);
   stroke-width: 1.5;
 }
 
-/* Zone colors are always light/pastel by design (see ZONE_COLORS), so the
-   center badge's text stays a fixed dark color in both themes, same as
-   .status-badge below the chart. */
 .gauge-center-badge {
   stroke: var(--color-surface);
   stroke-width: 3;
 }
 
 .gauge-center-label {
-  fill: #111827;
+  fill: var(--gauge-ink);
   font-size: 12px;
   font-weight: 700;
 }
 
+.gauge-legend-toggle {
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+.gauge-legend-toggle summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 0.25rem 0;
+  text-align: center;
+}
+
 .gauge-legend {
   list-style: none;
-  margin: 0.85rem 0 0;
+  margin: 0.6rem 0 0;
   padding: 0;
   width: 100%;
   display: grid;
@@ -212,19 +245,6 @@ main {
 .legend-desc {
   color: var(--color-text-muted);
   flex-basis: 100%;
-}
-
-.status-badge {
-  display: inline-block;
-  background: var(--status-color, var(--color-border));
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #111827;
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  padding: 0.3rem 1.25rem;
-  border-radius: 999px;
-  margin-top: -0.25rem;
 }
 
 .status-detail {
@@ -452,4 +472,38 @@ main {
 
 .error-message {
   color: var(--color-text);
+}
+
+/* Gauge help dialog */
+
+.gauge-help-dialog {
+  position: relative;
+  max-width: min(90vw, 480px);
+  max-height: 85vh;
+  overflow-y: auto;
+  border: none;
+  border-radius: var(--radius);
+  padding: 2.5rem 1.25rem 1.25rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.gauge-help-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.gauge-help-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 1rem;
+}
+
+.gauge-help-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: #ffffff;
 }

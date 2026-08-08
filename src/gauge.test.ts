@@ -5,7 +5,7 @@ import type { ReadinessResult, ZScorePoint } from './types';
 const RESULT: ReadinessResult = {
   code: 4,
   label: 'Normal',
-  detail: ['Go on!', 'Train as planned.'],
+  detail: ['Train as planned.', ''],
   color: '#b4f0b4',
   adviceCode: 3,
 };

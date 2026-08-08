@@ -24,6 +24,19 @@ const CENTER_X = VIEWBOX_SIZE / 2;
 const CENTER_Y = VIEWBOX_SIZE / 2;
 /** Pixels per z-score unit; the plotted radius ranges from (RADIUS_OFFSET - Z_LIMIT) to (RADIUS_OFFSET + Z_LIMIT) units. */
 const SCALE = 11;
+/**
+ * Rendered viewBox height, cropped short of the full VIEWBOX_SIZE square,
+ * which left a dead strip of blank space between the gauge and the text
+ * below it.
+ *
+ * The bottom wedge is missing (see the module doc above), so the lowest
+ * painted point is a wedge tip at rhrZ = +-Z_LIMIT, hrvZ = -Z_LIMIT, using
+ * the same `y = CENTER_Y - radius * cos(theta)` formula as zScoreToPoint:
+ *   CENTER_Y - (RADIUS_OFFSET + Z_LIMIT) * SCALE * cos(135deg) = 180.
+ * Today's marker can sit on that same tip and draws a halo of radius 9
+ * around it, so the real lower bound is 189; round up for stroke width.
+ */
+const VIEWBOX_HEIGHT = 191;
 
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
@@ -56,7 +69,7 @@ interface ZoneRect {
  * good HRV recovery (top) is greener, a high resting heart rate (right) or
  * very low HRV (outer edge) shades toward orange/red.
  */
-const ZONES: ZoneRect[] = [
+export const ZONES: ZoneRect[] = [
   { rhrRange: [-3, 3], hrvRange: [-3, 3], color: ZONE_COLORS[5] }, // Rest (background)
   { rhrRange: [1.7, 3], hrvRange: [-3, -1], color: ZONE_COLORS[6] }, // REST!
   { rhrRange: [-2, 1.7], hrvRange: [-3, -1], color: ZONE_COLORS[3] }, // LIT!
@@ -165,7 +178,7 @@ function renderTrail(trail: ZScorePoint[]): string {
   return line + dots;
 }
 
-/** Fills the gauge's empty pole (radius = 0 is unreachable, since z-scores are clamped) with today's result color and label, echoing the status badge below the chart. */
+/** Fills the gauge's empty pole (radius = 0 is unreachable, since z-scores are clamped) with today's result color and label. */
 function renderCenterBadge(result: ReadinessResult): string {
   return `
     <circle cx="${CENTER_X}" cy="${CENTER_Y}" r="29" fill="${result.color}" class="gauge-center-badge" />
@@ -196,7 +209,7 @@ function renderToday(today: ZScorePoint, color: string): string {
  */
 export function renderGauge(result: ReadinessResult, today: ZScorePoint, trail: ZScorePoint[] = []): string {
   return `
-    <svg viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" class="gauge" role="img" aria-label="Readiness gauge: ${result.label}">
+    <svg viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_HEIGHT}" class="gauge" role="img" aria-label="Readiness gauge: ${result.label}">
       ${renderZones()}
       ${renderGrid()}
       ${renderTrail(trail)}

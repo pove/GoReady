@@ -8,14 +8,24 @@ import type { ReadinessCode, ReadinessResult, WellnessRow, ZScorePoint } from '.
  * README's Credits section.
  */
 
-/** Gauge zone / legend color per readiness code. */
+/**
+ * Color per readiness code, used both for the code's gauge zone and for the
+ * center badge showing today's result.
+ *
+ * There are seven codes but only FIVE distinct colors, matching the five
+ * bands (and five legend entries) on the reference chart. Codes 2 and 3
+ * deliberately share the orange "limit intensity" band: both mean "train, but
+ * only easy", and both map to the same `TrainingAdvice` value below. Keeping
+ * one color per code instead would put paint on the legend that appears
+ * nowhere on the chart.
+ */
 export const ZONE_COLORS: Record<ReadinessCode, string> = {
   1: '#78f078', // HIT
-  2: '#e6e6e6', // LIT
-  3: '#ffa500', // LIT! / LIT (recovery incomplete)
-  4: '#b4f0b4', // Normal
+  2: '#ffa500', // LIT           -> limit intensity (shares 3's band)
+  3: '#ffa500', // LIT! / LIT    -> limit intensity
+  4: '#b4f0b4', // Normal        -> train as planned
   5: '#dcdcdc', // Rest
-  6: '#ff7878', // REST!
+  6: '#ff7878', // REST!         -> stress / illness
   7: '#ffffff', // no data
 };
 
@@ -36,13 +46,21 @@ interface LegendEntry {
   description: string;
 }
 
-/** Meaning of each non-"no data" readiness code, worst to best, for the gauge legend. */
+/**
+ * One row per COLORED BAND on the gauge, worst to best - five rows for the
+ * five colors in ZONE_COLORS, named as on the reference chart's own legend.
+ *
+ * Deliberately not one row per readiness code: codes share colors (2 and 3
+ * are both the orange "limit intensity" band), and the codes' short labels
+ * ("LIT", "LIT!") are ambiguous out of context - a legend row per code
+ * produced near-duplicate rows readers could not tell apart. `code` here is
+ * just whichever code identifies the band's color.
+ */
 export const READINESS_LEGEND: LegendEntry[] = [
-  { code: 6, label: 'REST!', description: 'Illness or stress detected' },
+  { code: 6, label: 'Stress / illness', description: 'Illness or stress detected' },
   { code: 5, label: 'Rest', description: 'Time to recover' },
-  { code: 3, label: 'LIT!', description: 'Recovery incomplete' },
-  { code: 2, label: 'LIT', description: 'Low intensity training' },
-  { code: 4, label: 'Normal', description: 'Train as planned' },
+  { code: 3, label: 'Limit intensity', description: 'Low intensity training only' },
+  { code: 4, label: 'Train as planned', description: 'Normal readiness' },
   { code: 1, label: 'HIT', description: 'Ready for intensive training' },
 ];
 
@@ -79,7 +97,9 @@ export function classify(hrvZ: number, rhrZ: number): Classification {
     return { code: 3, label: 'LIT!', detail: ['Keep calm!', 'Acute fatigue signs'] };
   }
   if (rhrZ < 1.7 && hrvZ >= -1) {
-    return { code: 4, label: 'Normal', detail: ['Go on!', 'Train as planned.'] };
+    // Deliberately dropped the original script's "Go on!" lead-in here - it
+    // read as filler, not information.
+    return { code: 4, label: 'Normal', detail: ['Train as planned.', ''] };
   }
   if (hrvZ >= -1) {
     return { code: 2, label: 'LIT', detail: ['Low intensity training', ''] };
