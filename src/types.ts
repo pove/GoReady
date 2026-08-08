@@ -12,8 +12,8 @@ export interface Settings {
   daysForLongTermTrend: number;
   /** How many standard deviations wide the long-term expected-range band is. */
   stdDevMultiplier: number;
-  /** Show the numeric value above each bar in the trend charts. */
-  showValuesInTrendCharts: boolean;
+  /** Which bars get their numeric value printed above them in the trend charts. */
+  trendValueLabels: TrendValueLabels;
   /** intervals.icu wellness field name to read resting HR from. */
   fieldRHR: string;
   /** intervals.icu wellness field name to read rMSSD from. */
@@ -25,6 +25,14 @@ export interface Settings {
 }
 
 export type HrvMetricDisplay = 'rmssd' | 'sdnn' | 'both';
+
+/**
+ * `none` prints no values at all. `minimal` labels only the most recent day and
+ * the window's high/low, since labelling all 30 bars collides into an
+ * unreadable smear at phone widths. `all` labels every measured day, as the
+ * original MATLAB chart did.
+ */
+export type TrendValueLabels = 'none' | 'minimal' | 'all';
 
 /**
  * One day of wellness data as read from intervals.icu. Missing numeric values

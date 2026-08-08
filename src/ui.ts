@@ -5,7 +5,15 @@ import { DEFAULT_SETTINGS } from './settings';
 import { READINESS_LEGEND, ZONE_COLORS } from './score';
 import type { ThemePreference } from './theme';
 import { renderTrendChart, renderTrendLegend } from './trendChart';
-import type { AdviceStatus, HrvMetricDisplay, ReadinessResult, Settings, WellnessRow, ZScorePoint } from './types';
+import type {
+  AdviceStatus,
+  HrvMetricDisplay,
+  ReadinessResult,
+  Settings,
+  TrendValueLabels,
+  WellnessRow,
+  ZScorePoint,
+} from './types';
 
 function escapeHtml(value: string): string {
   return value
@@ -184,9 +192,12 @@ export function renderSettingsForm(
             <label>Expected-range width (&times; std dev)
               <input type="number" name="stdDevMultiplier" min="0" step="0.05" value="${settings.stdDevMultiplier}" />
             </label>
-            <label class="checkbox-row">
-              <input type="checkbox" name="showValuesInTrendCharts" ${settings.showValuesInTrendCharts ? 'checked' : ''} />
-              Show values above bars
+            <label>Values above bars
+              <select name="trendValueLabels">
+                <option value="all" ${settings.trendValueLabels === 'all' ? 'selected' : ''}>All days</option>
+                <option value="minimal" ${settings.trendValueLabels === 'minimal' ? 'selected' : ''}>Latest, high, low only</option>
+                <option value="none" ${settings.trendValueLabels === 'none' ? 'selected' : ''}>None</option>
+              </select>
             </label>
           </fieldset>
         </details>
@@ -213,6 +224,10 @@ function readHrvMetricsToShow(value: FormDataEntryValue | null): HrvMetricDispla
   return value === 'rmssd' || value === 'sdnn' ? value : 'both';
 }
 
+function readTrendValueLabels(value: FormDataEntryValue | null): TrendValueLabels {
+  return value === 'none' || value === 'minimal' ? value : 'all';
+}
+
 function readSettingsForm(form: HTMLFormElement): Settings {
   const data = new FormData(form);
   const text = (name: string) => String(data.get(name) ?? '').trim();
@@ -229,7 +244,7 @@ function readSettingsForm(form: HTMLFormElement): Settings {
     daysForShortTermTrend: numberOr('daysForShortTermTrend', DEFAULT_SETTINGS.daysForShortTermTrend),
     daysForLongTermTrend: numberOr('daysForLongTermTrend', DEFAULT_SETTINGS.daysForLongTermTrend),
     stdDevMultiplier: numberOr('stdDevMultiplier', DEFAULT_SETTINGS.stdDevMultiplier),
-    showValuesInTrendCharts: data.get('showValuesInTrendCharts') === 'on',
+    trendValueLabels: readTrendValueLabels(data.get('trendValueLabels')),
     fieldRHR: text('fieldRHR') || DEFAULT_SETTINGS.fieldRHR,
     fieldRMSSD: text('fieldRMSSD') || DEFAULT_SETTINGS.fieldRMSSD,
     fieldSDNN: text('fieldSDNN') || DEFAULT_SETTINGS.fieldSDNN,
