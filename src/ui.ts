@@ -1,8 +1,9 @@
 import { renderGauge } from './gauge';
 import { DEFAULT_SETTINGS } from './settings';
+import { READINESS_LEGEND, ZONE_COLORS } from './score';
 import type { ThemePreference } from './theme';
 import { renderTrendChart } from './trendChart';
-import type { AdviceStatus, HrvMetricDisplay, ReadinessCode, ReadinessResult, Settings, WellnessRow } from './types';
+import type { AdviceStatus, HrvMetricDisplay, ReadinessResult, Settings, WellnessRow, ZScorePoint } from './types';
 
 function escapeHtml(value: string): string {
   return value
@@ -229,8 +230,10 @@ export interface DashboardData {
   settings: Settings;
   rows: WellnessRow[];
   result: ReadinessResult;
-  /** Previous days' readiness codes, most-recent-first, faded into the gauge as a trail. */
-  trail: ReadinessCode[];
+  /** Today's HRV/RHR z-scores, for placing today's marker on the gauge. */
+  todayScores: ZScorePoint;
+  /** Previous days' z-scores, most-recent-first, faded into the gauge as a trail. */
+  trail: ZScorePoint[];
   /** Outcome of trying to sync today's readiness to intervals.icu. */
   adviceStatus: AdviceStatus;
 }
@@ -243,6 +246,20 @@ interface DashboardHandlers {
 
 function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
   return settings.hrvMetricsToShow === 'both' || settings.hrvMetricsToShow === metric;
+}
+
+/** Explains what each colored zone on the gauge means, since the chart itself has no room for legible in-place labels at mobile sizes. */
+function renderGaugeLegend(): string {
+  const items = READINESS_LEGEND.map(
+    ({ code, label, description }) => `
+      <li>
+        <span class="legend-dot" style="--dot-color: ${ZONE_COLORS[code]}"></span>
+        <span class="legend-label">${escapeHtml(label)}</span>
+        <span class="legend-desc">${escapeHtml(description)}</span>
+      </li>
+    `,
+  ).join('');
+  return `<ul class="gauge-legend">${items}</ul>`;
 }
 
 function renderAdviceBanner(status: AdviceStatus): string {
@@ -264,7 +281,7 @@ export function renderDashboard(
   theme: ThemePreference,
   handlers: DashboardHandlers,
 ): void {
-  const { settings, rows, result, trail, adviceStatus } = data;
+  const { settings, rows, result, todayScores, trail, adviceStatus } = data;
   const [todayRow, yesterdayRow] = rows;
   const showRmssd = showsMetric('rmssd', settings);
   const showSdnn = showsMetric('sdnn', settings);
@@ -291,12 +308,13 @@ export function renderDashboard(
 
       <main>
         <section class="status-card">
-          ${renderGauge(result, trail)}
+          ${renderGauge(result, todayScores, trail)}
           <div class="status-badge" style="--status-color: ${result.color}">${escapeHtml(result.label)}</div>
           <div class="status-detail">
             <div>${escapeHtml(result.detail[0])}</div>
             <div>${escapeHtml(result.detail[1])}</div>
           </div>
+          ${renderGaugeLegend()}
         </section>
 
         ${renderAdviceBanner(adviceStatus)}
