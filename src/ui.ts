@@ -1,9 +1,10 @@
+import { unreachableBands, type BaselineConfidence } from './baseline';
 import { renderGauge } from './gauge';
-import { trainingPhaseNote } from './insights';
+import { buildInsights, type Insight } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
 import { READINESS_LEGEND, ZONE_COLORS } from './score';
 import type { ThemePreference } from './theme';
-import { renderTrendChart } from './trendChart';
+import { renderTrendChart, renderTrendLegend } from './trendChart';
 import type { AdviceStatus, HrvMetricDisplay, ReadinessResult, Settings, WellnessRow, ZScorePoint } from './types';
 
 function escapeHtml(value: string): string {
@@ -237,6 +238,8 @@ export interface DashboardData {
   trail: ZScorePoint[];
   /** Outcome of trying to sync today's readiness to intervals.icu. */
   adviceStatus: AdviceStatus;
+  /** How much history actually backs today's z-scores. Display-only. */
+  confidence: BaselineConfidence;
 }
 
 interface DashboardHandlers {
@@ -274,6 +277,45 @@ function renderGaugeLegend(): string {
   `;
 }
 
+/**
+ * Says how much history is behind today's score, when that is little enough to
+ * matter. Display-only: the readiness code, its colour and the value written
+ * back to intervals.icu are unaffected by what this says.
+ *
+ * The `unusable` wording is specific on purpose. With very few measurements some
+ * zones are not merely unlikely but arithmetically out of reach (see
+ * `maxReachableZ`), and "we cannot reach the Rest zone from here" is a far more
+ * useful thing to read than a vague low-confidence hedge.
+ */
+function renderConfidenceBadge(confidence: BaselineConfidence): string {
+  if (confidence.tier === 'ok') return '';
+
+  const counts = `Baseline: ${confidence.validDays} of the last ${confidence.windowDays} days measured.`;
+
+  if (confidence.tier === 'limited') {
+    return `<p class="confidence-badge">${escapeHtml(`${counts} Today's score is provisional until there is more history.`)}</p>`;
+  }
+
+  const missing = unreachableBands(confidence);
+  const consequence = missing.length
+    ? ` With this little history the score cannot reach ${formatList(missing)}, whatever this morning's numbers are.`
+    : '';
+  return `<p class="confidence-badge confidence-badge-unusable">${escapeHtml(`${counts}${consequence}`)}</p>`;
+}
+
+function formatList(items: string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`;
+}
+
+function renderInsights(insights: Insight[]): string {
+  if (insights.length === 0) return '';
+  const items = insights
+    .map((insight) => `<li class="insight-${insight.tone}">${escapeHtml(insight.text)}</li>`)
+    .join('');
+  return `<ul class="insights">${items}</ul>`;
+}
+
 function renderAdviceBanner(status: AdviceStatus): string {
   switch (status.kind) {
     case 'sent':
@@ -293,7 +335,7 @@ export function renderDashboard(
   theme: ThemePreference,
   handlers: DashboardHandlers,
 ): void {
-  const { settings, rows, result, todayScores, trail, adviceStatus } = data;
+  const { settings, rows, result, todayScores, trail, adviceStatus, confidence } = data;
   const [todayRow, yesterdayRow] = rows;
   const showRmssd = showsMetric('rmssd', settings);
   const showSdnn = showsMetric('sdnn', settings);
@@ -314,7 +356,14 @@ export function renderDashboard(
     renderTrendChart('RHR', rows.map((r) => r.rhr), settings),
   ].join('');
 
-  const phaseNote = trainingPhaseNote(result.code, todayScores.hrvZ, todayScores.rhrZ);
+  const insights = buildInsights({
+    code: result.code,
+    hrvZ: todayScores.hrvZ,
+    rhrZ: todayScores.rhrZ,
+    rows,
+    settings,
+    confidence,
+  });
 
   container.innerHTML = `
     <div class="screen dashboard-screen">
@@ -328,7 +377,8 @@ export function renderDashboard(
             <div>${escapeHtml(result.detail[0])}</div>
             <div>${escapeHtml(result.detail[1])}</div>
           </div>
-          ${phaseNote ? `<p class="status-note">${escapeHtml(phaseNote)}</p>` : ''}
+          ${renderConfidenceBadge(confidence)}
+          ${renderInsights(insights)}
           ${renderGaugeLegend()}
         </section>
 
@@ -351,6 +401,7 @@ export function renderDashboard(
         </section>
 
         <section class="trends">
+          ${renderTrendLegend()}
           ${trendCharts}
         </section>
 

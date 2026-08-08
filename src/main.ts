@@ -1,5 +1,6 @@
 import './style.css';
 import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
+import { readinessConfidence } from './insights';
 import { computeReadiness, computeZScoreSeries } from './score';
 import { isConfigured, loadSettings, saveSettings } from './settings';
 import { requiredHistoryDays } from './trendChart';
@@ -63,7 +64,10 @@ async function loadDashboard(): Promise<void> {
     const rows = await fetchWellness(settings, oldest, today);
     const result = computeReadiness(rows);
     const [todayScores = { hrvZ: NaN, rhrZ: NaN }, ...trail] = computeZScoreSeries(rows, GAUGE_TRAIL_DAYS);
+    const confidence = readinessConfidence(rows);
 
+    // Confidence is shown, never acted on: the advice sent to intervals.icu is
+    // exactly what it would have been before the badge existed.
     let adviceStatus: AdviceStatus = { kind: 'disabled' };
     if (settings.sendTrainingAdvice) {
       // intervals.icu already has a value for today: sending it again on every
@@ -82,7 +86,7 @@ async function loadDashboard(): Promise<void> {
 
     renderDashboard(
       app!,
-      { settings, rows, result, todayScores, trail, adviceStatus },
+      { settings, rows, result, todayScores, trail, adviceStatus, confidence },
       theme,
       { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard(), onToggleTheme: handleThemeToggle },
     );

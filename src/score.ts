@@ -1,3 +1,4 @@
+import { lnHrv } from './baseline';
 import { mean, populationStd } from './stats';
 import type { ReadinessCode, ReadinessResult, WellnessRow, ZScorePoint } from './types';
 
@@ -64,11 +65,14 @@ export const READINESS_LEGEND: LegendEntry[] = [
   { code: 1, label: 'HIT', description: 'Ready for intensive training' },
 ];
 
+/** Trailing window each day's z-scores are measured against, as in the original script. */
+export const READINESS_WINDOW_DAYS = 30;
+
 /** z-scores of the rMSSD-derived HRV and RHR at `rows[index]` against its trailing 30-day window. */
 function computeZScoresAt(rows: WellnessRow[], index: number): ZScorePoint {
-  const window = rows.slice(index, Math.min(index + 30, rows.length));
+  const window = rows.slice(index, Math.min(index + READINESS_WINDOW_DAYS, rows.length));
 
-  const hrvValues = window.map((row) => 20 * Math.log(row.rmssd));
+  const hrvValues = window.map((row) => lnHrv(row.rmssd));
   const rhrValues = window.map((row) => row.rhr);
 
   const hrvZ = (hrvValues[0] - mean(hrvValues)) / populationStd(hrvValues);

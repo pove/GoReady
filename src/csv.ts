@@ -1,4 +1,4 @@
-import { TRAINING_ADVICE_FIELD } from './constants';
+import { CONTEXT_FIELDS, TRAINING_ADVICE_FIELD } from './constants';
 import type { Settings, WellnessRow } from './types';
 
 /** Parses a simple comma-separated table (as returned by intervals.icu) into header/row records. */
@@ -28,12 +28,20 @@ function toNumber(value: string | undefined): number {
  * Sorting is done explicitly rather than trusting API order.
  */
 export function parseWellnessCsv(csvText: string, settings: Settings): WellnessRow[] {
+  // Any column the response happens not to carry parses to NaN, which is how the
+  // rest of the app already spells "no measurement". That is what lets the
+  // optional context columns be requested optimistically.
   const rows = parseTable(csvText).map((row) => ({
     date: row.date ?? '',
     rhr: toNumber(row[settings.fieldRHR]),
     rmssd: toNumber(row[settings.fieldRMSSD]),
     sdnn: toNumber(row[settings.fieldSDNN]),
     trainingAdvice: (row[TRAINING_ADVICE_FIELD] ?? '').trim(),
+    ctl: toNumber(row[CONTEXT_FIELDS.ctl]),
+    atl: toNumber(row[CONTEXT_FIELDS.atl]),
+    rampRate: toNumber(row[CONTEXT_FIELDS.rampRate]),
+    sleepSecs: toNumber(row[CONTEXT_FIELDS.sleepSecs]),
+    sleepScore: toNumber(row[CONTEXT_FIELDS.sleepScore]),
   }));
 
   return rows

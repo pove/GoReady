@@ -26,7 +26,11 @@ export interface Settings {
 
 export type HrvMetricDisplay = 'rmssd' | 'sdnn' | 'both';
 
-/** One day of wellness data as read from intervals.icu. Missing numeric values are NaN. */
+/**
+ * One day of wellness data as read from intervals.icu. Missing numeric values
+ * are NaN - including the context fields below, which are optional extras the
+ * insight engine uses when present and ignores when not.
+ */
 export interface WellnessRow {
   date: string; // 'YYYY-MM-DD'
   rhr: number;
@@ -34,9 +38,23 @@ export interface WellnessRow {
   sdnn: number;
   /** Raw "TrainingAdvice" field value already stored on intervals.icu for this day, if any. */
   trainingAdvice: string;
+  /** Chronic training load (intervals.icu "Fitness"). */
+  ctl: number;
+  /** Acute training load (intervals.icu "Fatigue"). */
+  atl: number;
+  /** Change in CTL per week, as intervals.icu computes it. */
+  rampRate: number;
+  /** Total sleep for the night, in seconds. */
+  sleepSecs: number;
+  /** Sleep score (0-100) if the athlete's device supplies one. */
+  sleepScore: number;
 }
 
-/** Readiness codes, ordered worst (1) to best (6). 7 means "no data". */
+/**
+ * Readiness codes. NOT ordered by quality - 1 is HIT (the best outcome) and 6
+ * is REST! (the worst); see `classify()` in score.ts for what each one means.
+ * 7 means "no data".
+ */
 export type ReadinessCode = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /** HRV/RHR z-scores for one day, as plotted on the readiness gauge. NaN when that day has no HRV data. */
