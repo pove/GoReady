@@ -191,9 +191,9 @@ export function renderTrendChart(label: string, valuesNewestFirst: number[], set
 export function renderTrendLegend(): string {
   return `
     <ul class="trend-legend">
-      <li><span class="trend-key trend-key-band" aria-hidden="true"></span>Expected range (avg &plusmn; SD)</li>
-      <li><span class="trend-key trend-key-in" aria-hidden="true"></span>Inside it</li>
-      <li><span class="trend-key trend-key-out" aria-hidden="true"></span>Outside it (hatched)</li>
+      <li><span class="trend-key trend-key-in" aria-hidden="true"></span>Inside range</li>
+      <li><span class="trend-key trend-key-out" aria-hidden="true"></span>Outside range</li>
+      <li><span class="trend-key trend-key-band" aria-hidden="true"></span>Expected range</li>
       <li><span class="trend-key trend-key-avg" aria-hidden="true"></span>Short-term average</li>
     </ul>
   `;
