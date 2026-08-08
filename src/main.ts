@@ -1,6 +1,6 @@
 import './style.css';
 import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
-import { computeReadiness } from './score';
+import { computeReadiness, computeReadinessTrail } from './score';
 import { isConfigured, loadSettings, saveSettings } from './settings';
 import { requiredHistoryDays } from './trendChart';
 import { renderDashboard, renderSettingsForm, showError, showLoading } from './ui';
@@ -9,6 +9,9 @@ const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('#app root element not found');
 
 let settings = loadSettings();
+
+/** How many previous days' needle positions to fade into the gauge as a trail. */
+const GAUGE_TRAIL_DAYS = 6;
 
 function formatDate(date: Date): string {
   const year = date.getFullYear();
@@ -49,6 +52,7 @@ async function loadDashboard(): Promise<void> {
   try {
     const rows = await fetchWellness(settings, oldest, today);
     const result = computeReadiness(rows);
+    const trail = computeReadinessTrail(rows, GAUGE_TRAIL_DAYS);
 
     let adviceError: string | null = null;
     if (settings.sendTrainingAdvice) {
@@ -61,7 +65,7 @@ async function loadDashboard(): Promise<void> {
 
     renderDashboard(
       app!,
-      { settings, rows, result, adviceError },
+      { settings, rows, result, trail, adviceError },
       { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard() },
     );
   } catch (error) {

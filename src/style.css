@@ -107,6 +107,19 @@ main {
   display: block;
 }
 
+/* var(--color-text) already flips per theme, so the needle and its trail
+   read correctly against the card in both light and dark without their own
+   dark/light overrides. */
+.gauge-needle,
+.gauge-pivot {
+  stroke: var(--color-text);
+  fill: var(--color-text);
+}
+
+.gauge-needle-trail {
+  stroke: var(--color-text);
+}
+
 .status-badge {
   display: inline-block;
   background: var(--status-color, var(--color-border));

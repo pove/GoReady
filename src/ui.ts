@@ -1,7 +1,7 @@
 import { renderGauge } from './gauge';
 import { DEFAULT_SETTINGS } from './settings';
 import { renderTrendChart } from './trendChart';
-import type { HrvMetricDisplay, ReadinessResult, Settings, WellnessRow } from './types';
+import type { HrvMetricDisplay, ReadinessCode, ReadinessResult, Settings, WellnessRow } from './types';
 
 function escapeHtml(value: string): string {
   return value
@@ -173,6 +173,8 @@ export interface DashboardData {
   settings: Settings;
   rows: WellnessRow[];
   result: ReadinessResult;
+  /** Previous days' readiness codes, most-recent-first, faded into the gauge as a trail. */
+  trail: ReadinessCode[];
   /** Set when sendTrainingAdvice was on but the write to intervals.icu failed. */
   adviceError: string | null;
 }
@@ -187,7 +189,7 @@ function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
 }
 
 export function renderDashboard(container: HTMLElement, data: DashboardData, handlers: DashboardHandlers): void {
-  const { settings, rows, result, adviceError } = data;
+  const { settings, rows, result, trail, adviceError } = data;
   const [todayRow, yesterdayRow] = rows;
   const showRmssd = showsMetric('rmssd', settings);
   const showSdnn = showsMetric('sdnn', settings);
@@ -217,7 +219,7 @@ export function renderDashboard(container: HTMLElement, data: DashboardData, han
 
       <main>
         <section class="status-card">
-          ${renderGauge(result)}
+          ${renderGauge(result, trail)}
           <div class="status-badge" style="--status-color: ${result.color}">${escapeHtml(result.label)}</div>
           <div class="status-detail">
             <div>${escapeHtml(result.detail[0])}</div>
