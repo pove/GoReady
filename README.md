@@ -186,13 +186,11 @@ shown), custom wellness field names for rMSSD/SDNN/resting HR (for setups
 using Snapshot fields instead of the defaults), and the trend chart windows
 (short-term/long-term days, expected-range width in standard deviations).
 
-Alongside those, the app optimistically requests a few read-only wellness
-columns (`ctl`, `atl`, `rampRate`, `sleepSecs`, `sleepScore`) purely so the
-insights can add context like "HRV is down after a hard ramp". Nothing that
-drives the readiness score reads them, and there is nothing to configure: any
-column your account doesn't populate is simply treated as missing, and if
-intervals.icu rejects the request outright the app retries with the core
-columns alone rather than failing to load.
+Alongside those, the app also requests a few read-only wellness columns
+(`ctl`, `atl`, `rampRate`, `sleepSecs`, `sleepScore`) purely so the insights
+can add context like "HRV is down after a hard ramp". Nothing that drives
+the readiness score reads them, and there is nothing to configure: any
+column your account doesn't populate is simply treated as missing.
 
 The button to the left of the gear icon cycles the color theme: system
 (default) → light → dark → system. The choice is kept in `sessionStorage`,

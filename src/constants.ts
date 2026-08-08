@@ -6,9 +6,8 @@ export const TRAINING_ADVICE_FIELD = 'TrainingAdvice';
  * ("HRV is down after a hard ramp", "...after a short night"). Nothing that
  * drives the readiness score reads them.
  *
- * They are requested optimistically: if the athlete's account does not populate
- * one, it parses to NaN and every rule that needs it simply stays quiet. See
- * `fetchWellness` for what happens if intervals.icu rejects a column outright.
+ * If an athlete's account does not populate one, it parses to NaN and every
+ * rule that needs it simply stays quiet.
  */
 export const CONTEXT_FIELDS = {
   ctl: 'ctl',
