@@ -9,20 +9,23 @@ import type { ReadinessCode, ReadinessResult, WellnessRow, ZScorePoint } from '.
  */
 
 /**
- * Gauge zone / legend color per readiness code, worst (6) to best (1):
- * red -> gray -> orange -> yellow -> light green -> green. LIT (2) used to
- * be an off-white gray (#e6e6e6) barely one shade apart from Rest's gray
- * (#dcdcdc) - indistinguishable as legend dots, and nearly invisible against
- * a light-theme card. Yellow both fixes that and fits the color ramp
- * between LIT!'s orange and Normal's light green.
+ * Color per readiness code, used both for the code's gauge zone and for the
+ * center badge showing today's result.
+ *
+ * There are seven codes but only FIVE distinct colors, matching the five
+ * bands (and five legend entries) on the reference chart. Codes 2 and 3
+ * deliberately share the orange "limit intensity" band: both mean "train, but
+ * only easy", and both map to the same `TrainingAdvice` value below. Keeping
+ * one color per code instead would put paint on the legend that appears
+ * nowhere on the chart.
  */
 export const ZONE_COLORS: Record<ReadinessCode, string> = {
   1: '#78f078', // HIT
-  2: '#ffd966', // LIT
-  3: '#ffa500', // LIT! / LIT (recovery incomplete)
-  4: '#b4f0b4', // Normal
+  2: '#ffa500', // LIT           -> limit intensity (shares 3's band)
+  3: '#ffa500', // LIT! / LIT    -> limit intensity
+  4: '#b4f0b4', // Normal        -> train as planned
   5: '#dcdcdc', // Rest
-  6: '#ff7878', // REST!
+  6: '#ff7878', // REST!         -> stress / illness
   7: '#ffffff', // no data
 };
 
@@ -44,23 +47,20 @@ interface LegendEntry {
 }
 
 /**
- * Meaning of each non-"no data" readiness code, worst to best, for the gauge
- * legend. This is deliberately NOT just the literal `classify()` label for
- * each code: code 3 fires from two different branches (very low RHR with
- * acute-fatigue signs, or moderate RHR with incomplete HRV recovery) that
- * display as "LIT!" or "LIT" depending on which one fired, and "LIT" is
- * *also* code 2's own, different, always-exact label. Reusing either string
- * for code 3's row would either collide with code 2's row or force two
- * "LIT"-ish rows to differ only by a "!" - both read as confusing/wrong. So
- * code 3 gets its own plain-English name instead, and "LIT" is left as
- * code 2's alone, matching the original chart's own wording for that zone.
+ * One row per COLORED BAND on the gauge, worst to best - five rows for the
+ * five colors in ZONE_COLORS, named as on the reference chart's own legend.
+ *
+ * Deliberately not one row per readiness code: codes share colors (2 and 3
+ * are both the orange "limit intensity" band), and the codes' short labels
+ * ("LIT", "LIT!") are ambiguous out of context - a legend row per code
+ * produced near-duplicate rows readers could not tell apart. `code` here is
+ * just whichever code identifies the band's color.
  */
 export const READINESS_LEGEND: LegendEntry[] = [
-  { code: 6, label: 'REST!', description: 'Illness or stress detected' },
+  { code: 6, label: 'Stress / illness', description: 'Illness or stress detected' },
   { code: 5, label: 'Rest', description: 'Time to recover' },
-  { code: 3, label: 'Limit intensity', description: "Recovery isn't complete" },
-  { code: 2, label: 'LIT', description: 'Low intensity training' },
-  { code: 4, label: 'Normal', description: 'Train as planned' },
+  { code: 3, label: 'Limit intensity', description: 'Low intensity training only' },
+  { code: 4, label: 'Train as planned', description: 'Normal readiness' },
   { code: 1, label: 'HIT', description: 'Ready for intensive training' },
 ];
 

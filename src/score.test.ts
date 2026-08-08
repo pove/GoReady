@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { classify, computeReadiness, computeZScoreSeries, READINESS_LEGEND, ZONE_COLORS } from './score';
+import { ZONES } from './gauge';
 import { mean, populationStd } from './stats';
-import type { WellnessRow } from './types';
+import type { ReadinessCode, WellnessRow } from './types';
 
 function row(date: string, rhr: number, rmssd: number, trainingAdvice = ''): WellnessRow {
   return { date, rhr, rmssd, sdnn: NaN, trainingAdvice };
@@ -135,15 +136,40 @@ describe('computeZScoreSeries', () => {
   });
 });
 
+// The legend explains the gauge's colored bands, so it has to stay in sync
+// with what the gauge actually paints and with what a result badge can show.
+// These guard against the whole class of "legend says something the chart
+// doesn't show" bugs: a row whose color appears nowhere, two rows the reader
+// can't tell apart, or a result color missing from the legend entirely.
 describe('READINESS_LEGEND', () => {
-  it('covers every non-"no data" readiness code exactly once', () => {
-    const codes = READINESS_LEGEND.map((entry) => entry.code).sort((a, b) => a - b);
-    expect(codes).toEqual([1, 2, 3, 4, 5, 6]);
+  const legendColors = READINESS_LEGEND.map((entry) => ZONE_COLORS[entry.code]);
+
+  it('gives every row a distinct color, so no two rows look alike', () => {
+    expect(new Set(legendColors).size).toBe(READINESS_LEGEND.length);
   });
 
-  it('every legend color matches ZONE_COLORS for its code', () => {
-    for (const entry of READINESS_LEGEND) {
-      expect(ZONE_COLORS[entry.code]).toBeDefined();
+  it('gives every row a distinct label', () => {
+    const labels = READINESS_LEGEND.map((entry) => entry.label);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it('has a row for every color the gauge paints', () => {
+    for (const color of new Set(ZONES.map((zone) => zone.color))) {
+      expect(legendColors).toContain(color);
+    }
+  });
+
+  it('has no row for a color the gauge never paints', () => {
+    const paintedColors = new Set(ZONES.map((zone) => zone.color));
+    for (const color of legendColors) {
+      expect(paintedColors).toContain(color);
+    }
+  });
+
+  it('has a row for every color a readiness result can be shown in', () => {
+    const codes: ReadinessCode[] = [1, 2, 3, 4, 5, 6]; // 7 = no data, never drawn
+    for (const code of codes) {
+      expect(legendColors).toContain(ZONE_COLORS[code]);
     }
   });
 });

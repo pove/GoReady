@@ -25,13 +25,17 @@ const CENTER_Y = VIEWBOX_SIZE / 2;
 /** Pixels per z-score unit; the plotted radius ranges from (RADIUS_OFFSET - Z_LIMIT) to (RADIUS_OFFSET + Z_LIMIT) units. */
 const SCALE = 11;
 /**
- * Rendered viewBox height, cropped short of VIEWBOX_SIZE: the bottom wedge
- * (see the class doc above) means nothing is ever drawn below roughly
- * CENTER_Y + outer-radius * cos(45deg) =~ 189 units, so a full square
- * viewBox left a dead strip of blank space between the gauge and whatever
- * follows it.
+ * Rendered viewBox height, cropped short of the full VIEWBOX_SIZE square,
+ * which left a dead strip of blank space between the gauge and the text
+ * below it.
+ *
+ * The bottom wedge is missing (see the module doc above), so the lowest
+ * painted point is a wedge tip at rhrZ = +-Z_LIMIT, hrvZ = -Z_LIMIT:
+ *   CENTER_Y + (RADIUS_OFFSET + Z_LIMIT) * SCALE * cos(135deg) = 180.
+ * Today's marker can sit on that same tip and draws a halo of radius 9
+ * around it, so the real lower bound is 189; round up for stroke width.
  */
-const VIEWBOX_HEIGHT = 195;
+const VIEWBOX_HEIGHT = 191;
 
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
@@ -64,7 +68,7 @@ interface ZoneRect {
  * good HRV recovery (top) is greener, a high resting heart rate (right) or
  * very low HRV (outer edge) shades toward orange/red.
  */
-const ZONES: ZoneRect[] = [
+export const ZONES: ZoneRect[] = [
   { rhrRange: [-3, 3], hrvRange: [-3, 3], color: ZONE_COLORS[5] }, // Rest (background)
   { rhrRange: [1.7, 3], hrvRange: [-3, -1], color: ZONE_COLORS[6] }, // REST!
   { rhrRange: [-2, 1.7], hrvRange: [-3, -1], color: ZONE_COLORS[3] }, // LIT!
