@@ -1,4 +1,4 @@
-import { TRAINING_ADVICE_FIELD } from './constants';
+import { CONTEXT_FIELDS, TRAINING_ADVICE_FIELD } from './constants';
 import { parseWellnessCsv } from './csv';
 import type { Settings, WellnessRow } from './types';
 
@@ -50,15 +50,21 @@ async function proxyRequest(
   return response;
 }
 
-/** Fetches resting HR / rMSSD / SDNN / TrainingAdvice for the given date range (inclusive), newest first. */
+/**
+ * Fetches resting HR / rMSSD / SDNN / TrainingAdvice for the given date range
+ * (inclusive), newest first, plus the optional context columns.
+ *
+ * The column list stays explicit rather than being dropped to fetch everything:
+ * `parseTable` splits on bare commas, so pulling in free-text fields like
+ * `notes` would shift every column after them.
+ */
 export async function fetchWellness(settings: Settings, oldest: string, newest: string): Promise<WellnessRow[]> {
-  const cols = [settings.fieldRHR, settings.fieldRMSSD, settings.fieldSDNN, TRAINING_ADVICE_FIELD].join(',');
+  const cols = [settings.fieldRHR, settings.fieldRMSSD, settings.fieldSDNN, TRAINING_ADVICE_FIELD, ...Object.values(CONTEXT_FIELDS)];
   const athleteId = encodeURIComponent(settings.athleteId);
-  const apiPath = `athlete/${athleteId}/wellness.csv?oldest=${oldest}&newest=${newest}&cols=${cols}`;
+  const apiPath = `athlete/${athleteId}/wellness.csv?oldest=${oldest}&newest=${newest}&cols=${cols.join(',')}`;
 
   const response = await proxyRequest(settings, apiPath);
-  const csvText = await response.text();
-  return parseWellnessCsv(csvText, settings);
+  return parseWellnessCsv(await response.text(), settings);
 }
 
 /** Writes today's readiness code to intervals.icu's "TrainingAdvice" wellness field. */

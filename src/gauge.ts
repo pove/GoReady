@@ -206,9 +206,16 @@ function renderToday(today: ZScorePoint, color: string): string {
  * real HRV/RHR z-scores rather than a single discrete zone, so the chart
  * reflects how close to (or far from) a boundary each day actually was.
  *
- * `today` is this app's own z-score pair (kept separate from `result` so the
- * marker is placed on the same continuous scale as the trail). `trail` holds
- * up to a few previous days' z-scores, most-recent-first (index 0 = yesterday).
+ * `today` is this app's own z-score pair, kept separate from `result` so the
+ * marker lands on real coordinates rather than at the centre of a zone.
+ * `trail` holds up to a few previous days' z-scores, most-recent-first
+ * (index 0 = yesterday).
+ *
+ * Every dot is plotted on the same axes, but each one is that day's OWN
+ * z-score, measured against its own trailing 30-day window at the time. The
+ * baselines therefore differ slightly from dot to dot, so the trail shows how
+ * unusual each morning was when it happened - not the raw HRV/RHR trajectory.
+ * A flat series with a drifting baseline will still show the point moving.
  */
 export function renderGauge(result: ReadinessResult, today: ZScorePoint, trail: ZScorePoint[] = []): string {
   return `

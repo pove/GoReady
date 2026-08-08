@@ -13,6 +13,14 @@
      var(--color-text) - which turns near-white in dark mode and all but
      disappears against those same light zones. */
   --gauge-ink: #111827;
+  /* Trend-chart status colors. Deliberately NOT themed: both clear 3:1 against
+     the light (#ffffff) and dark (#1f2937) card surfaces, so one pair works in
+     both modes. They are also only half the encoding - out-of-band bars are
+     hatched as well, because red and green differ by only about 4 dE under
+     deuteranopia and cannot carry this distinction by hue alone. */
+  --chart-in-band: #0ca30c;
+  --chart-out-of-band: #d03b3b;
+  --chart-out-of-band-hatch: #7d1f1f;
   color-scheme: light;
 }
 
@@ -133,13 +141,53 @@ main {
   opacity: 0.6;
 }
 
-.status-note {
-  font-size: 0.85rem;
+/* Baseline confidence badge: how much history is actually behind today's score. */
+.confidence-badge {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  margin: 0.7rem 0 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  font-style: italic;
-  line-height: 1.4;
+  max-width: 36ch;
+  text-align: center;
+}
+
+.confidence-badge-unusable {
+  border-color: var(--chart-out-of-band);
+  color: var(--color-text);
+}
+
+/* Supplementary insights under the readiness status. */
+.insights {
+  list-style: none;
   margin: 0.6rem 0 0;
-  max-width: 34ch;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 36ch;
+}
+
+.insights li {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--color-border);
+  text-align: left;
+}
+
+/* Qualified with `.insights li` so these beat that rule's border shorthand -
+   a bare `.insight-caution` loses the specificity contest and never paints. */
+.insights li.insight-caution {
+  border-left-color: var(--chart-out-of-band);
+  color: var(--color-text);
+}
+
+.insights li.insight-positive {
+  border-left-color: var(--chart-in-band);
 }
 
 .gauge {
@@ -194,28 +242,17 @@ main {
   font-weight: 700;
 }
 
-.gauge-legend-toggle {
-  width: 100%;
-  margin-top: 0.6rem;
-}
-
-.gauge-legend-toggle summary {
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  padding: 0.25rem 0;
-  text-align: center;
-}
-
+/* Zone legend, shown inside the gauge help dialog (see below) rather than
+   inline on the dashboard - one column, since the dialog is wide enough for
+   the fuller per-zone descriptions and a two-column grid would cramp them. */
 .gauge-legend {
   list-style: none;
-  margin: 0.6rem 0 0;
+  margin: 0 0 1rem;
   padding: 0;
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   text-align: left;
 }
 
@@ -224,8 +261,8 @@ main {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0 0.4rem;
-  font-size: 0.78rem;
-  line-height: 1.3;
+  font-size: 0.85rem;
+  line-height: 1.35;
 }
 
 .legend-dot {
@@ -338,6 +375,77 @@ main {
 .trend-axis {
   font-size: 8px;
   fill: var(--color-text-muted);
+}
+
+/* Recessive: the expected range is context for the bars, not a mark competing
+   with them, so it is neutral ink rather than a colour of its own.
+   Themed ink, NOT --gauge-ink: that one is deliberately fixed dark for the
+   gauge's pastel zones, and would be invisible here on the dark card. */
+.trend-band {
+  fill: var(--color-text);
+  fill-opacity: 0.12;
+}
+
+.trend-bar-in {
+  fill: var(--chart-in-band);
+}
+
+.trend-bar-out {
+  fill: var(--chart-out-of-band);
+}
+
+.trend-hatch-line {
+  stroke: var(--chart-out-of-band-hatch);
+  stroke-width: 1.4;
+}
+
+.trend-average-line {
+  stroke: var(--color-text);
+  stroke-width: 1.5;
+}
+
+.trend-legend {
+  list-style: none;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.trend-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.trend-key {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.trend-key-in {
+  background: var(--chart-in-band);
+}
+
+.trend-key-out {
+  background: var(--chart-out-of-band);
+  /* Mirrors the 45-degree hatch the out-of-band bars carry. */
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--chart-out-of-band-hatch) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+.trend-key-avg {
+  height: 0;
+  border-top: 2px dashed var(--color-text);
+  border-radius: 0;
 }
 
 /* Buttons */
@@ -498,6 +606,12 @@ main {
   top: 0.5rem;
   right: 0.5rem;
   font-size: 1rem;
+}
+
+.gauge-help-title {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  text-align: center;
 }
 
 .gauge-help-image {

@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { classify, computeReadiness, computeZScoreSeries, READINESS_LEGEND, ZONE_COLORS } from './score';
 import { ZONES } from './gauge';
 import { mean, populationStd } from './stats';
+import { wellnessRow } from './testFixtures';
 import type { ReadinessCode, WellnessRow } from './types';
 
 function row(date: string, rhr: number, rmssd: number, trainingAdvice = ''): WellnessRow {
-  return { date, rhr, rmssd, sdnn: NaN, trainingAdvice };
+  return wellnessRow({ date, rhr, rmssd, trainingAdvice });
 }
 
 // classify(hrvZ, rhrZ) is ported 1:1 from the original MATLAB getScore()

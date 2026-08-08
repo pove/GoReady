@@ -1,9 +1,10 @@
+import { unreachableBands, type ReadinessConfidence } from './baseline';
 import { renderGauge } from './gauge';
-import { trainingPhaseNote } from './insights';
+import { buildInsights, type Insight } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
 import { READINESS_LEGEND, ZONE_COLORS } from './score';
 import type { ThemePreference } from './theme';
-import { renderTrendChart } from './trendChart';
+import { renderTrendChart, renderTrendLegend } from './trendChart';
 import type { AdviceStatus, HrvMetricDisplay, ReadinessResult, Settings, WellnessRow, ZScorePoint } from './types';
 
 function escapeHtml(value: string): string {
@@ -237,6 +238,8 @@ export interface DashboardData {
   trail: ZScorePoint[];
   /** Outcome of trying to sync today's readiness to intervals.icu. */
   adviceStatus: AdviceStatus;
+  /** How much history actually backs today's z-scores. Display-only. */
+  confidence: ReadinessConfidence;
 }
 
 interface DashboardHandlers {
@@ -251,10 +254,11 @@ function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
 
 /**
  * Explains what each colored zone on the gauge means, since the chart itself
- * has no room for legible in-place labels at mobile sizes. Tucked behind a
- * `<details>` toggle, closed by default, so it doesn't push the rest of the
- * dashboard down every time - most visits, the gauge's center label and the
- * detail text below it already say what today's zone means.
+ * has no room for legible in-place labels at mobile sizes. Lives in the gauge's
+ * info dialog (see `attachGaugeHelpDialog`) rather than inline on the
+ * dashboard, alongside the reference chart image - one ⓘ button, one place
+ * that explains the gauge, instead of splitting the explanation across a
+ * panel on the page and a dialog.
  */
 function renderGaugeLegend(): string {
   const items = READINESS_LEGEND.map(
@@ -266,12 +270,47 @@ function renderGaugeLegend(): string {
       </li>
     `,
   ).join('');
-  return `
-    <details class="gauge-legend-toggle">
-      <summary>What do the zones mean?</summary>
-      <ul class="gauge-legend">${items}</ul>
-    </details>
-  `;
+  return `<ul class="gauge-legend">${items}</ul>`;
+}
+
+/**
+ * Says how much history is behind today's score, when that is little enough to
+ * matter. Display-only: the readiness code, its colour and the value written
+ * back to intervals.icu are unaffected by what this says.
+ *
+ * The `unusable` wording is specific on purpose. With very few measurements some
+ * zones are not merely unlikely but arithmetically out of reach (see
+ * `maxReachableZ`), and "we cannot reach the Rest zone from here" is a far more
+ * useful thing to read than a vague low-confidence hedge.
+ */
+function renderConfidenceBadge(confidence: ReadinessConfidence): string {
+  const { overall } = confidence;
+  if (overall.tier === 'ok') return '';
+
+  const counts = `Baseline: ${overall.validDays} of the last ${overall.windowDays} days measured.`;
+
+  if (overall.tier === 'limited') {
+    return `<p class="confidence-badge">${escapeHtml(`${counts} Today's score is provisional until there is more history.`)}</p>`;
+  }
+
+  const missing = unreachableBands(confidence);
+  const consequence = missing.length
+    ? ` With this little history the score cannot reach ${formatList(missing)}, whatever this morning's numbers are.`
+    : '';
+  return `<p class="confidence-badge confidence-badge-unusable">${escapeHtml(`${counts}${consequence}`)}</p>`;
+}
+
+function formatList(items: string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`;
+}
+
+function renderInsights(insights: Insight[]): string {
+  if (insights.length === 0) return '';
+  const items = insights
+    .map((insight) => `<li class="insight-${insight.tone}">${escapeHtml(insight.text)}</li>`)
+    .join('');
+  return `<ul class="insights">${items}</ul>`;
 }
 
 function renderAdviceBanner(status: AdviceStatus): string {
@@ -293,7 +332,7 @@ export function renderDashboard(
   theme: ThemePreference,
   handlers: DashboardHandlers,
 ): void {
-  const { settings, rows, result, todayScores, trail, adviceStatus } = data;
+  const { settings, rows, result, todayScores, trail, adviceStatus, confidence } = data;
   const [todayRow, yesterdayRow] = rows;
   const showRmssd = showsMetric('rmssd', settings);
   const showSdnn = showsMetric('sdnn', settings);
@@ -314,7 +353,14 @@ export function renderDashboard(
     renderTrendChart('RHR', rows.map((r) => r.rhr), settings),
   ].join('');
 
-  const phaseNote = trainingPhaseNote(result.code, todayScores.hrvZ, todayScores.rhrZ);
+  const insights = buildInsights({
+    code: result.code,
+    hrvZ: todayScores.hrvZ,
+    rhrZ: todayScores.rhrZ,
+    rows,
+    settings,
+    confidence,
+  });
 
   container.innerHTML = `
     <div class="screen dashboard-screen">
@@ -328,12 +374,14 @@ export function renderDashboard(
             <div>${escapeHtml(result.detail[0])}</div>
             <div>${escapeHtml(result.detail[1])}</div>
           </div>
-          ${phaseNote ? `<p class="status-note">${escapeHtml(phaseNote)}</p>` : ''}
-          ${renderGaugeLegend()}
+          ${renderConfidenceBadge(confidence)}
+          ${renderInsights(insights)}
         </section>
 
         <dialog id="gauge-help-dialog" class="gauge-help-dialog">
           <button id="gauge-help-close" class="icon-btn gauge-help-close" type="button" aria-label="Close">&#10005;</button>
+          <h2 class="gauge-help-title">What do the zones mean?</h2>
+          ${renderGaugeLegend()}
           <img id="gauge-help-image" class="gauge-help-image" alt="Reference readiness chart: resting heart rate (activation) around the arc, HRV (recovery) as distance from the center, with named zones for HIT, train as planned, limit intensity, rest, and stress/illness." />
         </dialog>
 
@@ -351,6 +399,7 @@ export function renderDashboard(
         </section>
 
         <section class="trends">
+          ${renderTrendLegend()}
           ${trendCharts}
         </section>
 
