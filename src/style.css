@@ -107,6 +107,7 @@ main {
 /* Status card */
 
 .status-card {
+  position: relative;
   background: var(--color-surface);
   border-radius: var(--radius);
   padding: 1.25rem 1rem 1.5rem;
@@ -115,6 +116,24 @@ main {
   flex-direction: column;
   align-items: center;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.gauge-help-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  font-size: 1.15rem;
+  padding: 0.15rem;
+  opacity: 0.6;
+}
+
+.status-note {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  line-height: 1.4;
+  margin: 0.6rem 0 0;
+  max-width: 34ch;
 }
 
 .gauge {
@@ -466,4 +485,49 @@ main {
 
 .error-message {
   color: var(--color-text);
+}
+
+/* Gauge help dialog */
+
+.gauge-help-dialog {
+  position: relative;
+  max-width: min(90vw, 480px);
+  max-height: 85vh;
+  overflow-y: auto;
+  border: none;
+  border-radius: var(--radius);
+  padding: 2.5rem 1.25rem 1.25rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.gauge-help-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.gauge-help-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 1rem;
+}
+
+.gauge-help-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.gauge-help-caption {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin: 0.75rem 0 0;
+}
+
+.gauge-help-caption a {
+  color: inherit;
 }

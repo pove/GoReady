@@ -1,4 +1,5 @@
 import { renderGauge } from './gauge';
+import { trainingPhaseNote } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
 import { READINESS_LEGEND, ZONE_COLORS } from './score';
 import type { ThemePreference } from './theme';
@@ -313,20 +314,34 @@ export function renderDashboard(
     renderTrendChart('RHR', rows.map((r) => r.rhr), settings),
   ].join('');
 
+  const phaseNote = trainingPhaseNote(result.code, todayScores.hrvZ, todayScores.rhrZ);
+
   container.innerHTML = `
     <div class="screen dashboard-screen">
       ${renderHeader(theme, true)}
 
       <main>
         <section class="status-card">
+          <button id="gauge-help-btn" class="icon-btn gauge-help-btn" type="button" aria-label="What does the gauge mean?" title="What does the gauge mean?">&#9432;</button>
           ${renderGauge(result, todayScores, trail)}
           <div class="status-badge" style="--status-color: ${result.color}">${escapeHtml(result.label)}</div>
           <div class="status-detail">
             <div>${escapeHtml(result.detail[0])}</div>
             <div>${escapeHtml(result.detail[1])}</div>
           </div>
+          ${phaseNote ? `<p class="status-note">${escapeHtml(phaseNote)}</p>` : ''}
           ${renderGaugeLegend()}
         </section>
+
+        <dialog id="gauge-help-dialog" class="gauge-help-dialog">
+          <button id="gauge-help-close" class="icon-btn gauge-help-close" type="button" aria-label="Close">&#10005;</button>
+          <img id="gauge-help-image" class="gauge-help-image" alt="Reference readiness chart: resting heart rate (activation) around the arc, HRV (recovery) as distance from the center, with named zones for HIT, train as planned, limit intensity, rest, and stress/illness." />
+          <p class="gauge-help-caption">
+            Adapted from a chart shared on the intervals.icu forum, crediting
+            <a href="https://forum.intervals.icu/u/Inigo_Tolosa" target="_blank" rel="noopener noreferrer">@Inigo_Tolosa</a>'s
+            original readiness script.
+          </p>
+        </dialog>
 
         ${renderAdviceBanner(adviceStatus)}
 
@@ -352,4 +367,20 @@ export function renderDashboard(
 
   attachHeaderHandlers(container, handlers.onToggleTheme, handlers.onSettings);
   container.querySelector<HTMLButtonElement>('#refresh-btn')!.addEventListener('click', handlers.onRefresh);
+  attachGaugeHelpDialog(container);
+}
+
+/** Wires up the "what does the gauge mean?" dialog, loading its (fairly large) reference image only once the user actually opens it. */
+function attachGaugeHelpDialog(container: HTMLElement): void {
+  const dialog = container.querySelector<HTMLDialogElement>('#gauge-help-dialog')!;
+  const image = container.querySelector<HTMLImageElement>('#gauge-help-image')!;
+
+  container.querySelector<HTMLButtonElement>('#gauge-help-btn')!.addEventListener('click', () => {
+    if (!image.src) image.src = `${import.meta.env.BASE_URL}readiness-chart-reference.jpg`;
+    dialog.showModal();
+  });
+  container.querySelector<HTMLButtonElement>('#gauge-help-close')!.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
 }
