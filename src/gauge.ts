@@ -52,7 +52,6 @@ function renderNeedle(code: ReadinessCode): string {
 export function renderGauge(result: ReadinessResult): string {
   return `
     <svg viewBox="0 0 220 130" class="gauge" role="img" aria-label="Readiness gauge: ${result.label}">
-      <rect x="0" y="0" width="220" height="130" rx="12" fill="rgba(255, 255, 255, 0.6)" />
       ${renderZones()}
       ${renderNeedle(result.code)}
     </svg>

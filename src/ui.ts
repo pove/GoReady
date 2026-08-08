@@ -1,7 +1,7 @@
 import { renderGauge } from './gauge';
 import { DEFAULT_SETTINGS } from './settings';
 import { renderTrendChart } from './trendChart';
-import type { ReadinessResult, Settings, WellnessRow } from './types';
+import type { HrvMetricDisplay, ReadinessResult, Settings, WellnessRow } from './types';
 
 function escapeHtml(value: string): string {
   return value
@@ -26,14 +26,23 @@ export function showLoading(container: HTMLElement): void {
   `;
 }
 
-export function showError(container: HTMLElement, message: string, onRetry: () => void): void {
+interface ErrorScreenHandlers {
+  onRetry: () => void;
+  onSettings: () => void;
+}
+
+export function showError(container: HTMLElement, message: string, handlers: ErrorScreenHandlers): void {
   container.innerHTML = `
     <div class="screen error-screen">
       <p class="error-message">${escapeHtml(message)}</p>
-      <button id="retry-btn" class="btn-primary" type="button">Try again</button>
+      <div class="form-actions">
+        <button id="error-settings-btn" class="btn-secondary" type="button">Settings</button>
+        <button id="retry-btn" class="btn-primary" type="button">Try again</button>
+      </div>
     </div>
   `;
-  container.querySelector<HTMLButtonElement>('#retry-btn')!.addEventListener('click', onRetry);
+  container.querySelector<HTMLButtonElement>('#retry-btn')!.addEventListener('click', handlers.onRetry);
+  container.querySelector<HTMLButtonElement>('#error-settings-btn')!.addEventListener('click', handlers.onSettings);
 }
 
 interface SettingsFormHandlers {
@@ -79,6 +88,13 @@ export function renderSettingsForm(container: HTMLElement, settings: Settings, h
 
           <fieldset>
             <legend>Wellness field names</legend>
+            <label>HRV metrics to show
+              <select name="hrvMetricsToShow">
+                <option value="both" ${settings.hrvMetricsToShow === 'both' ? 'selected' : ''}>Both rMSSD and SDNN</option>
+                <option value="rmssd" ${settings.hrvMetricsToShow === 'rmssd' ? 'selected' : ''}>rMSSD only</option>
+                <option value="sdnn" ${settings.hrvMetricsToShow === 'sdnn' ? 'selected' : ''}>SDNN only</option>
+              </select>
+            </label>
             <label>Resting HR field
               <input type="text" name="fieldRHR" value="${escapeHtml(settings.fieldRHR)}" />
             </label>
@@ -125,6 +141,10 @@ export function renderSettingsForm(container: HTMLElement, settings: Settings, h
   container.querySelector<HTMLButtonElement>('#settings-cancel')?.addEventListener('click', () => handlers.onCancel?.());
 }
 
+function readHrvMetricsToShow(value: FormDataEntryValue | null): HrvMetricDisplay {
+  return value === 'rmssd' || value === 'sdnn' ? value : 'both';
+}
+
 function readSettingsForm(form: HTMLFormElement): Settings {
   const data = new FormData(form);
   const text = (name: string) => String(data.get(name) ?? '').trim();
@@ -145,6 +165,7 @@ function readSettingsForm(form: HTMLFormElement): Settings {
     fieldRHR: text('fieldRHR') || DEFAULT_SETTINGS.fieldRHR,
     fieldRMSSD: text('fieldRMSSD') || DEFAULT_SETTINGS.fieldRMSSD,
     fieldSDNN: text('fieldSDNN') || DEFAULT_SETTINGS.fieldSDNN,
+    hrvMetricsToShow: readHrvMetricsToShow(data.get('hrvMetricsToShow')),
   };
 }
 
@@ -161,9 +182,31 @@ interface DashboardHandlers {
   onRefresh: () => void;
 }
 
+function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
+  return settings.hrvMetricsToShow === 'both' || settings.hrvMetricsToShow === metric;
+}
+
 export function renderDashboard(container: HTMLElement, data: DashboardData, handlers: DashboardHandlers): void {
   const { settings, rows, result, adviceError } = data;
   const [todayRow, yesterdayRow] = rows;
+  const showRmssd = showsMetric('rmssd', settings);
+  const showSdnn = showsMetric('sdnn', settings);
+
+  const statsRows = [
+    showRmssd
+      ? `<tr><th scope="row">rMSSD</th><td>${formatValue(todayRow?.rmssd)}</td><td>${formatValue(yesterdayRow?.rmssd)}</td></tr>`
+      : '',
+    showSdnn
+      ? `<tr><th scope="row">SDNN</th><td>${formatValue(todayRow?.sdnn)}</td><td>${formatValue(yesterdayRow?.sdnn)}</td></tr>`
+      : '',
+    `<tr><th scope="row">RHR</th><td>${formatValue(todayRow?.rhr)}</td><td>${formatValue(yesterdayRow?.rhr)}</td></tr>`,
+  ].join('');
+
+  const trendCharts = [
+    showRmssd ? renderTrendChart('rMSSD', rows.map((r) => r.rmssd), settings) : '',
+    showSdnn ? renderTrendChart('SDNN', rows.map((r) => r.sdnn), settings) : '',
+    renderTrendChart('RHR', rows.map((r) => r.rhr), settings),
+  ].join('');
 
   container.innerHTML = `
     <div class="screen dashboard-screen">
@@ -173,9 +216,9 @@ export function renderDashboard(container: HTMLElement, data: DashboardData, han
       </header>
 
       <main>
-        <section class="status-card" style="--status-color: ${result.color}">
+        <section class="status-card">
           ${renderGauge(result)}
-          <div class="status-label">${escapeHtml(result.label)}</div>
+          <div class="status-badge" style="--status-color: ${result.color}">${escapeHtml(result.label)}</div>
           <div class="status-detail">
             <div>${escapeHtml(result.detail[0])}</div>
             <div>${escapeHtml(result.detail[1])}</div>
@@ -191,17 +234,13 @@ export function renderDashboard(container: HTMLElement, data: DashboardData, han
               <tr><th scope="col"></th><th scope="col">Today</th><th scope="col">Yesterday</th></tr>
             </thead>
             <tbody>
-              <tr><th scope="row">rMSSD</th><td>${formatValue(todayRow?.rmssd)}</td><td>${formatValue(yesterdayRow?.rmssd)}</td></tr>
-              <tr><th scope="row">SDNN</th><td>${formatValue(todayRow?.sdnn)}</td><td>${formatValue(yesterdayRow?.sdnn)}</td></tr>
-              <tr><th scope="row">RHR</th><td>${formatValue(todayRow?.rhr)}</td><td>${formatValue(yesterdayRow?.rhr)}</td></tr>
+              ${statsRows}
             </tbody>
           </table>
         </section>
 
         <section class="trends">
-          ${renderTrendChart('rMSSD', rows.map((r) => r.rmssd), settings)}
-          ${renderTrendChart('SDNN', rows.map((r) => r.sdnn), settings)}
-          ${renderTrendChart('RHR', rows.map((r) => r.rhr), settings)}
+          ${trendCharts}
         </section>
 
         <button id="refresh-btn" class="btn-secondary refresh-btn" type="button">Refresh</button>

@@ -1,6 +1,7 @@
-import type { Settings } from './types';
+import type { HrvMetricDisplay, Settings } from './types';
 
 const STORAGE_KEY = 'goready.settings';
+const HRV_METRIC_DISPLAY_VALUES: HrvMetricDisplay[] = ['rmssd', 'sdnn', 'both'];
 
 export const DEFAULT_SETTINGS: Settings = {
   athleteId: '',
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fieldRHR: 'restingHR',
   fieldRMSSD: 'hrv',
   fieldSDNN: 'hrvSDNN',
+  hrvMetricsToShow: 'both',
 };
 
 /** Required fields without which the app cannot call intervals.icu. */
@@ -25,7 +27,11 @@ export function loadSettings(): Settings {
 
   try {
     const parsed = JSON.parse(raw) as Partial<Settings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    const merged = { ...DEFAULT_SETTINGS, ...parsed };
+    if (!HRV_METRIC_DISPLAY_VALUES.includes(merged.hrvMetricsToShow)) {
+      merged.hrvMetricsToShow = DEFAULT_SETTINGS.hrvMetricsToShow;
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

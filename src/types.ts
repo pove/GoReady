@@ -20,7 +20,11 @@ export interface Settings {
   fieldRMSSD: string;
   /** intervals.icu wellness field name to read SDNN from. */
   fieldSDNN: string;
+  /** Which HRV metric(s) to show in the stats table and trend charts. RHR is always shown. */
+  hrvMetricsToShow: HrvMetricDisplay;
 }
+
+export type HrvMetricDisplay = 'rmssd' | 'sdnn' | 'both';
 
 /** One day of wellness data as read from intervals.icu. Missing values are NaN. */
 export interface WellnessRow {

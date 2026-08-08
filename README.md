@@ -86,8 +86,9 @@ On first load (or via the gear icon), the settings screen asks for:
   script's `trainingAdviceMustBeSentToIntervals` setting.
 
 An **Advanced** section exposes the same knobs the MATLAB config had:
-custom wellness field names for rMSSD/SDNN/resting HR (for setups using
-Snapshot fields instead of the defaults), and the trend chart windows
+which HRV metric(s) to display (rMSSD, SDNN, or both — resting HR is always
+shown), custom wellness field names for rMSSD/SDNN/resting HR (for setups
+using Snapshot fields instead of the defaults), and the trend chart windows
 (short-term/long-term days, expected-range width in standard deviations).
 
 Settings are stored in `sessionStorage`, scoped to the browser tab — closing
