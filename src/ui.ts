@@ -248,7 +248,13 @@ function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
   return settings.hrvMetricsToShow === 'both' || settings.hrvMetricsToShow === metric;
 }
 
-/** Explains what each colored zone on the gauge means, since the chart itself has no room for legible in-place labels at mobile sizes. */
+/**
+ * Explains what each colored zone on the gauge means, since the chart itself
+ * has no room for legible in-place labels at mobile sizes. Tucked behind a
+ * `<details>` toggle, closed by default, so it doesn't push the rest of the
+ * dashboard down every time - most visits, the badge and detail text below
+ * the gauge already say what today's zone means.
+ */
 function renderGaugeLegend(): string {
   const items = READINESS_LEGEND.map(
     ({ code, label, description }) => `
@@ -259,7 +265,12 @@ function renderGaugeLegend(): string {
       </li>
     `,
   ).join('');
-  return `<ul class="gauge-legend">${items}</ul>`;
+  return `
+    <details class="gauge-legend-toggle">
+      <summary>What do the zones mean?</summary>
+      <ul class="gauge-legend">${items}</ul>
+    </details>
+  `;
 }
 
 function renderAdviceBanner(status: AdviceStatus): string {

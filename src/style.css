@@ -175,9 +175,23 @@ main {
   font-weight: 700;
 }
 
+.gauge-legend-toggle {
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+.gauge-legend-toggle summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 0.25rem 0;
+  text-align: center;
+}
+
 .gauge-legend {
   list-style: none;
-  margin: 0.85rem 0 0;
+  margin: 0.6rem 0 0;
   padding: 0;
   width: 100%;
   display: grid;
