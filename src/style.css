@@ -520,14 +520,3 @@ main {
   border-radius: 8px;
   background: #ffffff;
 }
-
-.gauge-help-caption {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  line-height: 1.4;
-  margin: 0.75rem 0 0;
-}
-
-.gauge-help-caption a {
-  color: inherit;
-}

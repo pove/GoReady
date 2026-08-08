@@ -36,11 +36,17 @@ interface LegendEntry {
   description: string;
 }
 
-/** Meaning of each non-"no data" readiness code, worst to best, for the gauge legend. */
+/**
+ * Meaning of each non-"no data" readiness code, worst to best, for the gauge
+ * legend. Code 3 fires from two different branches of `classify()` (very low
+ * RHR with acute-fatigue signs, labeled "LIT!"; or moderate RHR with
+ * incomplete HRV recovery, labeled "LIT") that share a color, so the legend
+ * shows both label variants in one row rather than picking just one.
+ */
 export const READINESS_LEGEND: LegendEntry[] = [
   { code: 6, label: 'REST!', description: 'Illness or stress detected' },
   { code: 5, label: 'Rest', description: 'Time to recover' },
-  { code: 3, label: 'LIT!', description: 'Recovery incomplete' },
+  { code: 3, label: 'LIT / LIT!', description: 'Recovery is not complete' },
   { code: 2, label: 'LIT', description: 'Low intensity training' },
   { code: 4, label: 'Normal', description: 'Train as planned' },
   { code: 1, label: 'HIT', description: 'Ready for intensive training' },
@@ -79,7 +85,9 @@ export function classify(hrvZ: number, rhrZ: number): Classification {
     return { code: 3, label: 'LIT!', detail: ['Keep calm!', 'Acute fatigue signs'] };
   }
   if (rhrZ < 1.7 && hrvZ >= -1) {
-    return { code: 4, label: 'Normal', detail: ['Go on!', 'Train as planned.'] };
+    // Deliberately dropped the original script's "Go on!" lead-in here - it
+    // read as filler, not information.
+    return { code: 4, label: 'Normal', detail: ['Train as planned.', ''] };
   }
   if (hrvZ >= -1) {
     return { code: 2, label: 'LIT', detail: ['Low intensity training', ''] };

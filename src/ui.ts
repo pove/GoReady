@@ -336,11 +336,6 @@ export function renderDashboard(
         <dialog id="gauge-help-dialog" class="gauge-help-dialog">
           <button id="gauge-help-close" class="icon-btn gauge-help-close" type="button" aria-label="Close">&#10005;</button>
           <img id="gauge-help-image" class="gauge-help-image" alt="Reference readiness chart: resting heart rate (activation) around the arc, HRV (recovery) as distance from the center, with named zones for HIT, train as planned, limit intensity, rest, and stress/illness." />
-          <p class="gauge-help-caption">
-            Adapted from a chart shared on the intervals.icu forum, crediting
-            <a href="https://forum.intervals.icu/u/Inigo_Tolosa" target="_blank" rel="noopener noreferrer">@Inigo_Tolosa</a>'s
-            original readiness script.
-          </p>
         </dialog>
 
         ${renderAdviceBanner(adviceStatus)}
