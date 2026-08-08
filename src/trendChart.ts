@@ -1,5 +1,5 @@
 import { computeTrend, isInBand, type TrendDay } from './baseline';
-import type { Settings } from './types';
+import type { Settings, TrendValueLabels } from './types';
 
 const DISPLAY_DAYS = 30;
 const CHART_WIDTH = 320;
@@ -86,14 +86,16 @@ function renderHatchPattern(id: string): string {
 }
 
 /**
- * Which bars get a number printed over them. Labelling all thirty put the digits
- * on top of each other at phone widths, which is not a label at all - so this
- * picks the days worth naming: the most recent, and the window's high and low.
- * The "show values" setting still governs whether any of them appear.
+ * Which bars get a number printed over them, per the `trendValueLabels`
+ * setting. `all` labels every measured day - `minimal` exists because
+ * labelling all thirty at once collides into an unreadable smear at phone
+ * widths, so it picks just the days worth naming: the most recent, and the
+ * window's high and low.
  */
-function labelledIndices(days: TrendDay[]): Set<number> {
+export function labelledIndices(days: TrendDay[], mode: TrendValueLabels): Set<number> {
   const measured = days.map((d, i) => ({ i, value: d.value })).filter((d) => !Number.isNaN(d.value));
-  if (measured.length === 0) return new Set();
+  if (mode === 'none' || measured.length === 0) return new Set();
+  if (mode === 'all') return new Set(measured.map((d) => d.i));
 
   const highest = measured.reduce((best, d) => (d.value > best.value ? d : best));
   const lowest = measured.reduce((best, d) => (d.value < best.value ? d : best));
@@ -106,10 +108,10 @@ function renderBars(
   yFor: PixelY,
   barWidth: number,
   floorY: number,
-  showValues: boolean,
+  valueLabels: TrendValueLabels,
   hatchId: string,
 ): string {
-  const labelled = showValues ? labelledIndices(days) : new Set<number>();
+  const labelled = labelledIndices(days, valueLabels);
 
   return days
     .map((day, i) => {
@@ -174,7 +176,7 @@ export function renderTrendChart(label: string, valuesNewestFirst: number[], set
         <text x="${PADDING.left - 4}" y="${(PADDING.top + 4).toFixed(1)}" class="trend-axis" text-anchor="end">${max}</text>
         <text x="${PADDING.left - 4}" y="${floorY.toFixed(1)}" class="trend-axis" text-anchor="end">${min}</text>
         ${renderBand(visible, xFor, yFor)}
-        ${renderBars(visible, xFor, yFor, barWidth, floorY, settings.showValuesInTrendCharts, hatchId)}
+        ${renderBars(visible, xFor, yFor, barWidth, floorY, settings.trendValueLabels, hatchId)}
         ${renderShortTermLine(visible, xFor, yFor)}
       </svg>
     </div>
@@ -189,7 +191,7 @@ export function renderTrendChart(label: string, valuesNewestFirst: number[], set
 export function renderTrendLegend(): string {
   return `
     <ul class="trend-legend">
-      <li><span class="trend-key trend-key-band" aria-hidden="true"></span>Expected range</li>
+      <li><span class="trend-key trend-key-band" aria-hidden="true"></span>Expected range (avg &plusmn; SD)</li>
       <li><span class="trend-key trend-key-in" aria-hidden="true"></span>Inside it</li>
       <li><span class="trend-key trend-key-out" aria-hidden="true"></span>Outside it (hatched)</li>
       <li><span class="trend-key trend-key-avg" aria-hidden="true"></span>Short-term average</li>

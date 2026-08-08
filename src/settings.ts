@@ -1,7 +1,8 @@
-import type { HrvMetricDisplay, Settings } from './types';
+import type { HrvMetricDisplay, Settings, TrendValueLabels } from './types';
 
 const STORAGE_KEY = 'goready.settings';
 const HRV_METRIC_DISPLAY_VALUES: HrvMetricDisplay[] = ['rmssd', 'sdnn', 'both'];
+const TREND_VALUE_LABELS_VALUES: TrendValueLabels[] = ['none', 'minimal', 'all'];
 
 export const DEFAULT_SETTINGS: Settings = {
   athleteId: '',
@@ -11,7 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   daysForShortTermTrend: 7,
   daysForLongTermTrend: 60,
   stdDevMultiplier: 0.75,
-  showValuesInTrendCharts: true,
+  trendValueLabels: 'all',
   fieldRHR: 'restingHR',
   fieldRMSSD: 'hrv',
   fieldSDNN: 'hrvSDNN',
@@ -26,10 +27,22 @@ export function loadSettings(): Settings {
   if (!raw) return { ...DEFAULT_SETTINGS };
 
   try {
-    const parsed = JSON.parse(raw) as Partial<Settings>;
+    // `showValuesInTrendCharts` was this setting's old shape, a plain checkbox -
+    // read it for anyone with that still in storage, so an explicit "off"
+    // survives becoming the new picker's "none" instead of silently resetting.
+    // Checked against `parsed` (what was actually stored), not `merged` (which
+    // the spread below has already back-filled with a VALID default even when
+    // the key was missing, so a validity check against `merged` alone can
+    // never tell "absent" from "present and fine").
+    const parsed = JSON.parse(raw) as Partial<Settings> & { showValuesInTrendCharts?: boolean };
     const merged = { ...DEFAULT_SETTINGS, ...parsed };
     if (!HRV_METRIC_DISPLAY_VALUES.includes(merged.hrvMetricsToShow)) {
       merged.hrvMetricsToShow = DEFAULT_SETTINGS.hrvMetricsToShow;
+    }
+    if (parsed.trendValueLabels === undefined) {
+      merged.trendValueLabels = parsed.showValuesInTrendCharts === false ? 'none' : DEFAULT_SETTINGS.trendValueLabels;
+    } else if (!TREND_VALUE_LABELS_VALUES.includes(merged.trendValueLabels)) {
+      merged.trendValueLabels = DEFAULT_SETTINGS.trendValueLabels;
     }
     return merged;
   } catch {
