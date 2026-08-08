@@ -242,28 +242,17 @@ main {
   font-weight: 700;
 }
 
-.gauge-legend-toggle {
-  width: 100%;
-  margin-top: 0.6rem;
-}
-
-.gauge-legend-toggle summary {
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  padding: 0.25rem 0;
-  text-align: center;
-}
-
+/* Zone legend, shown inside the gauge help dialog (see below) rather than
+   inline on the dashboard - one column, since the dialog is wide enough for
+   the fuller per-zone descriptions and a two-column grid would cramp them. */
 .gauge-legend {
   list-style: none;
-  margin: 0.6rem 0 0;
+  margin: 0 0 1rem;
   padding: 0;
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   text-align: left;
 }
 
@@ -272,8 +261,8 @@ main {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0 0.4rem;
-  font-size: 0.78rem;
-  line-height: 1.3;
+  font-size: 0.85rem;
+  line-height: 1.35;
 }
 
 .legend-dot {
@@ -617,6 +606,12 @@ main {
   top: 0.5rem;
   right: 0.5rem;
   font-size: 1rem;
+}
+
+.gauge-help-title {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  text-align: center;
 }
 
 .gauge-help-image {

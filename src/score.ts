@@ -56,13 +56,37 @@ interface LegendEntry {
  * ("LIT", "LIT!") are ambiguous out of context - a legend row per code
  * produced near-duplicate rows readers could not tell apart. `code` here is
  * just whichever code identifies the band's color.
+ *
+ * Shown in the gauge's info dialog (see `attachGaugeHelpDialog` in ui.ts),
+ * not inline on the dashboard, so the descriptions can afford to name the
+ * underlying RHR/HRV pattern rather than just the label.
  */
 export const READINESS_LEGEND: LegendEntry[] = [
-  { code: 6, label: 'Stress / illness', description: 'Illness or stress detected' },
-  { code: 5, label: 'Rest', description: 'Time to recover' },
-  { code: 3, label: 'Limit intensity', description: 'Low intensity training only' },
-  { code: 4, label: 'Train as planned', description: 'Normal readiness' },
-  { code: 1, label: 'HIT', description: 'Ready for intensive training' },
+  {
+    code: 6,
+    label: 'Stress / illness',
+    description: 'Resting HR is high and HRV is low - illness or heavy stress is likely. Prioritize rest.',
+  },
+  {
+    code: 5,
+    label: 'Rest',
+    description: "HRV is low even though resting HR is calm - give recovery a day to catch up.",
+  },
+  {
+    code: 3,
+    label: 'Limit intensity',
+    description: "Recovery isn't complete yet - stick to low-intensity training only.",
+  },
+  {
+    code: 4,
+    label: 'Train as planned',
+    description: 'Resting HR and HRV are both within their normal range - train as scheduled.',
+  },
+  {
+    code: 1,
+    label: 'HIT',
+    description: "Resting HR is calm and HRV is strong - you're primed for a hard session.",
+  },
 ];
 
 /** Trailing window each day's z-scores are measured against, as in the original script. */

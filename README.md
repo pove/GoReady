@@ -50,9 +50,10 @@ RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
 chart used, with a fading trail showing where the last several days sat on
 the same chart. The chart paints five colored bands (not one per readiness
 code — codes 2 and 3 both mean "train easy" and share the orange band). A
-collapsed "What do the zones mean?" panel below the gauge names each band as
-the reference chart itself does (Stress / illness, Rest, Limit intensity,
-Train as planned, HIT), and a small ⓘ button opens that reference chart.
+small ⓘ button opens a dialog that names each band as the reference chart
+itself does (Stress / illness, Rest, Limit intensity, Train as planned, HIT)
+with a short description of the underlying RHR/HRV pattern, followed by the
+reference chart itself for anyone who wants the full diagram.
 
 ## Insights
 
@@ -206,9 +207,9 @@ simplicity trade-off for a single-athlete personal tool, not an oversight.
 - Single athlete only — no coach/multi-athlete menu.
 - No "yesterday's activity" panel (power/HR stream chart, RPE/feel/etc.).
 - The polar readiness chart is an SVG port of the original, sized for a small
-  screen, with a collapsed text legend added underneath (and the original
-  chart available on demand via the ⓘ button) since the chart itself has no
-  room for legible zone labels at mobile sizes.
+  screen, with the zone legend and the original chart both moved into an
+  on-demand dialog (via the ⓘ button) since the chart itself has no room for
+  legible zone labels at mobile sizes.
 - Time zone handling was dropped — the browser's local time is used directly.
 - UI text is in English regardless of the browser locale.
 - The insights and the baseline-confidence badge (see above) are additions, not

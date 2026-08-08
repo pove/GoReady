@@ -254,10 +254,11 @@ function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
 
 /**
  * Explains what each colored zone on the gauge means, since the chart itself
- * has no room for legible in-place labels at mobile sizes. Tucked behind a
- * `<details>` toggle, closed by default, so it doesn't push the rest of the
- * dashboard down every time - most visits, the gauge's center label and the
- * detail text below it already say what today's zone means.
+ * has no room for legible in-place labels at mobile sizes. Lives in the gauge's
+ * info dialog (see `attachGaugeHelpDialog`) rather than inline on the
+ * dashboard, alongside the reference chart image - one ⓘ button, one place
+ * that explains the gauge, instead of splitting the explanation across a
+ * panel on the page and a dialog.
  */
 function renderGaugeLegend(): string {
   const items = READINESS_LEGEND.map(
@@ -269,12 +270,7 @@ function renderGaugeLegend(): string {
       </li>
     `,
   ).join('');
-  return `
-    <details class="gauge-legend-toggle">
-      <summary>What do the zones mean?</summary>
-      <ul class="gauge-legend">${items}</ul>
-    </details>
-  `;
+  return `<ul class="gauge-legend">${items}</ul>`;
 }
 
 /**
@@ -379,11 +375,12 @@ export function renderDashboard(
           </div>
           ${renderConfidenceBadge(confidence)}
           ${renderInsights(insights)}
-          ${renderGaugeLegend()}
         </section>
 
         <dialog id="gauge-help-dialog" class="gauge-help-dialog">
           <button id="gauge-help-close" class="icon-btn gauge-help-close" type="button" aria-label="Close">&#10005;</button>
+          <h2 class="gauge-help-title">What do the zones mean?</h2>
+          ${renderGaugeLegend()}
           <img id="gauge-help-image" class="gauge-help-image" alt="Reference readiness chart: resting heart rate (activation) around the arc, HRV (recovery) as distance from the center, with named zones for HIT, train as planned, limit intensity, rest, and stress/illness." />
         </dialog>
 
