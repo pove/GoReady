@@ -93,6 +93,10 @@ shown), custom wellness field names for rMSSD/SDNN/resting HR (for setups
 using Snapshot fields instead of the defaults), and the trend chart windows
 (short-term/long-term days, expected-range width in standard deviations).
 
+The button to the left of the gear icon cycles the color theme: system
+(default) → light → dark → system. The choice is kept in `sessionStorage`,
+same as the rest of the settings.
+
 Settings are stored in `sessionStorage`, scoped to the browser tab — closing
 the tab clears them, so you'll re-enter them next visit. That's a deliberate
 simplicity trade-off for a single-athlete personal tool, not an oversight.

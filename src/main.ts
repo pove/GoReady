@@ -3,16 +3,24 @@ import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
 import { computeReadiness, computeReadinessTrail } from './score';
 import { isConfigured, loadSettings, saveSettings } from './settings';
 import { requiredHistoryDays } from './trendChart';
-import { renderDashboard, renderSettingsForm, showError, showLoading } from './ui';
+import { applyTheme, cycleTheme, loadTheme } from './theme';
+import { renderDashboard, renderSettingsForm, showError, showLoading, updateThemeButton } from './ui';
 import type { AdviceStatus } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('#app root element not found');
 
 let settings = loadSettings();
+let theme = loadTheme();
+applyTheme(theme);
 
 /** How many previous days' needle positions to fade into the gauge as a trail. */
 const GAUGE_TRAIL_DAYS = 6;
+
+function handleThemeToggle(): void {
+  theme = cycleTheme(theme);
+  updateThemeButton(app!, theme);
+}
 
 function formatDate(date: Date): string {
   const year = date.getFullYear();
@@ -33,7 +41,7 @@ function describeError(error: unknown): string {
 }
 
 function openSettings(firstRun: boolean): void {
-  renderSettingsForm(app!, settings, {
+  renderSettingsForm(app!, settings, theme, {
     firstRun,
     onSave: (updated) => {
       settings = updated;
@@ -41,11 +49,12 @@ function openSettings(firstRun: boolean): void {
       void loadDashboard();
     },
     onCancel: firstRun ? undefined : () => void loadDashboard(),
+    onToggleTheme: handleThemeToggle,
   });
 }
 
 async function loadDashboard(): Promise<void> {
-  showLoading(app!);
+  showLoading(app!, theme, handleThemeToggle);
 
   const today = formatDate(new Date());
   const oldest = formatDate(daysAgo(requiredHistoryDays(settings)));
@@ -74,10 +83,15 @@ async function loadDashboard(): Promise<void> {
     renderDashboard(
       app!,
       { settings, rows, result, trail, adviceStatus },
-      { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard() },
+      theme,
+      { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard(), onToggleTheme: handleThemeToggle },
     );
   } catch (error) {
-    showError(app!, describeError(error), { onRetry: () => void loadDashboard(), onSettings: () => openSettings(false) });
+    showError(app!, describeError(error), theme, {
+      onRetry: () => void loadDashboard(),
+      onSettings: () => openSettings(false),
+      onToggleTheme: handleThemeToggle,
+    });
   }
 }
 

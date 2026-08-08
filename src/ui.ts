@@ -1,5 +1,6 @@
 import { renderGauge } from './gauge';
 import { DEFAULT_SETTINGS } from './settings';
+import type { ThemePreference } from './theme';
 import { renderTrendChart } from './trendChart';
 import type { AdviceStatus, HrvMetricDisplay, ReadinessCode, ReadinessResult, Settings, WellnessRow } from './types';
 
@@ -17,30 +18,80 @@ function formatValue(value: number | undefined): string {
   return String(Math.round(value));
 }
 
-export function showLoading(container: HTMLElement): void {
+const THEME_ICON: Record<ThemePreference, string> = {
+  system: '&#9680;', // ◐ follows the system preference
+  light: '&#9728;', // ☀
+  dark: '&#9790;', // ☾
+};
+
+/** Describes what clicking the button does next, not the current state - clearer for screen readers. */
+const THEME_NEXT_LABEL: Record<ThemePreference, string> = {
+  system: 'Switch to light theme',
+  light: 'Switch to dark theme',
+  dark: 'Switch to system theme',
+};
+
+function renderHeader(theme: ThemePreference, showSettingsButton: boolean): string {
+  return `
+    <header class="app-header">
+      <h1>GoReady</h1>
+      <div class="header-actions">
+        <button id="theme-btn" class="icon-btn" type="button" aria-label="${THEME_NEXT_LABEL[theme]}" title="${THEME_NEXT_LABEL[theme]}">${THEME_ICON[theme]}</button>
+        ${showSettingsButton ? '<button id="settings-btn" class="icon-btn" type="button" aria-label="Settings">&#9881;</button>' : ''}
+      </div>
+    </header>
+  `;
+}
+
+function attachHeaderHandlers(container: HTMLElement, onToggleTheme: () => void, onSettings?: () => void): void {
+  container.querySelector<HTMLButtonElement>('#theme-btn')!.addEventListener('click', onToggleTheme);
+  if (onSettings) {
+    container.querySelector<HTMLButtonElement>('#settings-btn')!.addEventListener('click', onSettings);
+  }
+}
+
+/** Updates the theme button's icon/label in place, without re-rendering the current screen. */
+export function updateThemeButton(container: HTMLElement, theme: ThemePreference): void {
+  const btn = container.querySelector<HTMLButtonElement>('#theme-btn');
+  if (!btn) return;
+  btn.innerHTML = THEME_ICON[theme];
+  btn.setAttribute('aria-label', THEME_NEXT_LABEL[theme]);
+  btn.title = THEME_NEXT_LABEL[theme];
+}
+
+export function showLoading(container: HTMLElement, theme: ThemePreference, onToggleTheme: () => void): void {
   container.innerHTML = `
     <div class="screen loading-screen">
-      <div class="spinner" aria-hidden="true"></div>
-      <p>Loading your readiness&hellip;</p>
+      ${renderHeader(theme, false)}
+      <div class="loading-content">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading your readiness&hellip;</p>
+      </div>
     </div>
   `;
+  attachHeaderHandlers(container, onToggleTheme);
 }
 
 interface ErrorScreenHandlers {
   onRetry: () => void;
   onSettings: () => void;
+  onToggleTheme: () => void;
 }
 
-export function showError(container: HTMLElement, message: string, handlers: ErrorScreenHandlers): void {
+export function showError(container: HTMLElement, message: string, theme: ThemePreference, handlers: ErrorScreenHandlers): void {
   container.innerHTML = `
     <div class="screen error-screen">
-      <p class="error-message">${escapeHtml(message)}</p>
-      <div class="form-actions">
-        <button id="error-settings-btn" class="btn-secondary" type="button">Settings</button>
-        <button id="retry-btn" class="btn-primary" type="button">Try again</button>
+      ${renderHeader(theme, false)}
+      <div class="error-content">
+        <p class="error-message">${escapeHtml(message)}</p>
+        <div class="form-actions">
+          <button id="error-settings-btn" class="btn-secondary" type="button">Settings</button>
+          <button id="retry-btn" class="btn-primary" type="button">Try again</button>
+        </div>
       </div>
     </div>
   `;
+  attachHeaderHandlers(container, handlers.onToggleTheme);
   container.querySelector<HTMLButtonElement>('#retry-btn')!.addEventListener('click', handlers.onRetry);
   container.querySelector<HTMLButtonElement>('#error-settings-btn')!.addEventListener('click', handlers.onSettings);
 }
@@ -49,14 +100,18 @@ interface SettingsFormHandlers {
   firstRun: boolean;
   onSave: (settings: Settings) => void;
   onCancel?: () => void;
+  onToggleTheme: () => void;
 }
 
-export function renderSettingsForm(container: HTMLElement, settings: Settings, handlers: SettingsFormHandlers): void {
+export function renderSettingsForm(
+  container: HTMLElement,
+  settings: Settings,
+  theme: ThemePreference,
+  handlers: SettingsFormHandlers,
+): void {
   container.innerHTML = `
     <div class="screen settings-screen">
-      <header class="app-header">
-        <h1>GoReady</h1>
-      </header>
+      ${renderHeader(theme, false)}
       <form id="settings-form" class="settings-form">
         <p class="settings-intro">
           ${handlers.firstRun ? 'Connect your intervals.icu account to get started.' : 'Update your settings.'}
@@ -139,6 +194,7 @@ export function renderSettingsForm(container: HTMLElement, settings: Settings, h
   });
 
   container.querySelector<HTMLButtonElement>('#settings-cancel')?.addEventListener('click', () => handlers.onCancel?.());
+  attachHeaderHandlers(container, handlers.onToggleTheme);
 }
 
 function readHrvMetricsToShow(value: FormDataEntryValue | null): HrvMetricDisplay {
@@ -182,6 +238,7 @@ export interface DashboardData {
 interface DashboardHandlers {
   onSettings: () => void;
   onRefresh: () => void;
+  onToggleTheme: () => void;
 }
 
 function showsMetric(metric: 'rmssd' | 'sdnn', settings: Settings): boolean {
@@ -201,7 +258,12 @@ function renderAdviceBanner(status: AdviceStatus): string {
   }
 }
 
-export function renderDashboard(container: HTMLElement, data: DashboardData, handlers: DashboardHandlers): void {
+export function renderDashboard(
+  container: HTMLElement,
+  data: DashboardData,
+  theme: ThemePreference,
+  handlers: DashboardHandlers,
+): void {
   const { settings, rows, result, trail, adviceStatus } = data;
   const [todayRow, yesterdayRow] = rows;
   const showRmssd = showsMetric('rmssd', settings);
@@ -225,10 +287,7 @@ export function renderDashboard(container: HTMLElement, data: DashboardData, han
 
   container.innerHTML = `
     <div class="screen dashboard-screen">
-      <header class="app-header">
-        <h1>GoReady</h1>
-        <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings">&#9881;</button>
-      </header>
+      ${renderHeader(theme, true)}
 
       <main>
         <section class="status-card">
@@ -262,6 +321,6 @@ export function renderDashboard(container: HTMLElement, data: DashboardData, han
     </div>
   `;
 
-  container.querySelector<HTMLButtonElement>('#settings-btn')!.addEventListener('click', handlers.onSettings);
+  attachHeaderHandlers(container, handlers.onToggleTheme, handlers.onSettings);
   container.querySelector<HTMLButtonElement>('#refresh-btn')!.addEventListener('click', handlers.onRefresh);
 }
