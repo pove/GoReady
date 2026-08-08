@@ -21,6 +21,15 @@ function formatValue(value: number | undefined): string {
   return String(Math.round(value));
 }
 
+/** Formats a sleep duration as `7h30`, rounded to the nearest minute. */
+function formatSleepDuration(secs: number | undefined): string {
+  if (secs === undefined || Number.isNaN(secs) || secs < 0) return '--';
+  const totalMinutes = Math.round(secs / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h${String(minutes).padStart(2, '0')}`;
+}
+
 const THEME_ICON: Record<ThemePreference, string> = {
   system: '&#9680;', // ◐ follows the system preference
   light: '&#9728;', // ☀
@@ -345,6 +354,8 @@ export function renderDashboard(
       ? `<tr><th scope="row">SDNN</th><td>${formatValue(todayRow?.sdnn)}</td><td>${formatValue(yesterdayRow?.sdnn)}</td></tr>`
       : '',
     `<tr><th scope="row">RHR</th><td>${formatValue(todayRow?.rhr)}</td><td>${formatValue(yesterdayRow?.rhr)}</td></tr>`,
+    `<tr><th scope="row">Sleep</th><td>${formatSleepDuration(todayRow?.sleepSecs)}</td><td>${formatSleepDuration(yesterdayRow?.sleepSecs)}</td></tr>`,
+    `<tr><th scope="row">Sleep score</th><td>${formatValue(todayRow?.sleepScore)}</td><td>${formatValue(yesterdayRow?.sleepScore)}</td></tr>`,
   ].join('');
 
   const trendCharts = [
