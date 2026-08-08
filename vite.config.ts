@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 
 // Relative base so the built app works from any subfolder: GitHub Pages
@@ -5,4 +6,7 @@ import { defineConfig } from 'vite';
 // or the domain root.
 export default defineConfig({
   base: './',
+  test: {
+    include: ['src/**/*.test.ts'],
+  },
 });

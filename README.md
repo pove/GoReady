@@ -7,6 +7,17 @@ train today, shows that score on a gauge plus a 30-day trend for each metric,
 and (optionally) writes the score back to intervals.icu as the `TrainingAdvice`
 wellness field.
 
+## Credits
+
+The scoring algorithm and readiness gauge are based on a MATLAB script
+originally written by **[@Inigo_Tolosa](https://forum.intervals.icu/u/Inigo_Tolosa)**
+on the intervals.icu forum — see the
+["How-to guide: ImReady4 app for HRV-guided training"](https://forum.intervals.icu/t/how-to-guide-imready4-app-for-hrv-guided-training/25778)
+thread. All credit for the underlying method goes to them; this repo is just
+a TypeScript/web port. The gauge's polar-chart geometry was additionally
+checked against [ekr1/ImReady4Py](https://github.com/ekr1/ImReady4Py), a
+from-scratch Python port of the same tool.
+
 There is no backend and no account system — it's a static single-page app.
 Your intervals.icu API key is kept in the browser's `sessionStorage` only
 (cleared when the tab closes) and is never sent anywhere except intervals.icu
@@ -36,6 +47,12 @@ intervals.icu when "Write today's readiness back to intervals.icu" is enabled
 in settings. If intervals.icu already has a `TrainingAdvice` value for today
 (e.g. from an earlier refresh), GoReady leaves it alone instead of writing it
 again on every page load.
+
+The gauge plots today's HRV/RHR z-scores as a point on a polar chart (angle =
+RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
+chart used, with a fading trail showing where the last several days sat on
+the same chart. A legend below the gauge spells out what each colored zone
+means (`HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`).
 
 ## Local development
 
@@ -105,7 +122,17 @@ simplicity trade-off for a single-athlete personal tool, not an oversight.
 
 - Single athlete only — no coach/multi-athlete menu.
 - No "yesterday's activity" panel (power/HR stream chart, RPE/feel/etc.).
-- The 3D polar readiness chart was replaced with a simpler semicircle gauge
-  with the same color-coded zones, better suited to a small screen.
+- The polar readiness chart is an SVG port of the original, sized for a small
+  screen, with a text legend added underneath since the chart itself has no
+  room for legible zone labels at mobile sizes.
 - Time zone handling was dropped — the browser's local time is used directly.
 - UI text is in English regardless of the browser locale.
+
+## Running the tests
+
+```bash
+npm test
+```
+
+Unit tests (Vitest) cover the readiness scoring decision tree, the gauge's
+z-score-to-pixel geometry, CSV parsing, and the trend-chart windowing math.

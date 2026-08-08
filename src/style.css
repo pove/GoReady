@@ -124,17 +124,94 @@ main {
   display: block;
 }
 
-/* var(--color-text) already flips per theme, so the needle and its trail
-   read correctly against the card in both light and dark without their own
-   dark/light overrides. */
-.gauge-needle,
-.gauge-pivot {
+/* var(--color-text) already flips per theme, so the grid, trail and today's
+   halo read correctly against the card in both light and dark without their
+   own dark/light overrides. */
+.gauge-zone {
   stroke: var(--color-text);
-  fill: var(--color-text);
+  stroke-opacity: 0.15;
+  stroke-width: 1;
 }
 
-.gauge-needle-trail {
+.gauge-grid-line {
   stroke: var(--color-text);
+  stroke-opacity: 0.25;
+  stroke-width: 1;
+}
+
+.gauge-trail-line {
+  stroke: var(--color-text);
+  stroke-opacity: 0.35;
+  stroke-width: 1;
+}
+
+.gauge-trail-dot {
+  fill: var(--color-text);
+  stroke: none;
+}
+
+.gauge-today-halo {
+  fill: var(--color-surface);
+  stroke: var(--color-text);
+  stroke-width: 1.5;
+}
+
+.gauge-today-dot {
+  stroke: var(--color-text);
+  stroke-width: 1.5;
+}
+
+/* Zone colors are always light/pastel by design (see ZONE_COLORS), so the
+   center badge's text stays a fixed dark color in both themes, same as
+   .status-badge below the chart. */
+.gauge-center-badge {
+  stroke: var(--color-surface);
+  stroke-width: 3;
+}
+
+.gauge-center-label {
+  fill: #111827;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gauge-legend {
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 0.75rem;
+  text-align: left;
+}
+
+.gauge-legend li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.legend-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--dot-color);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  align-self: center;
+}
+
+.legend-label {
+  font-weight: 600;
+}
+
+.legend-desc {
+  color: var(--color-text-muted);
+  flex-basis: 100%;
 }
 
 .status-badge {

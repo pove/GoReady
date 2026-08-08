@@ -39,6 +39,12 @@ export interface WellnessRow {
 /** Readiness codes, ordered worst (1) to best (6). 7 means "no data". */
 export type ReadinessCode = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
+/** HRV/RHR z-scores for one day, as plotted on the readiness gauge. NaN when that day has no HRV data. */
+export interface ZScorePoint {
+  hrvZ: number;
+  rhrZ: number;
+}
+
 export interface ReadinessResult {
   code: ReadinessCode;
   label: string;

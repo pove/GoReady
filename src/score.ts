@@ -1,7 +1,14 @@
 import { mean, populationStd } from './stats';
-import type { ReadinessCode, ReadinessResult, WellnessRow } from './types';
+import type { ReadinessCode, ReadinessResult, WellnessRow, ZScorePoint } from './types';
 
-/** Background / needle color per readiness code. */
+/**
+ * Readiness scoring ported from a MATLAB script originally written by
+ * Inigo Tolosa (@Inigo_Tolosa on the intervals.icu forum); see the
+ * "How-to guide: ImReady4 app for HRV-guided training" forum thread. See the
+ * README's Credits section.
+ */
+
+/** Gauge zone / legend color per readiness code. */
 export const ZONE_COLORS: Record<ReadinessCode, string> = {
   1: '#78f078', // HIT
   2: '#e6e6e6', // LIT
@@ -23,8 +30,24 @@ const ADVICE_CODE_BY_READINESS: Record<ReadinessCode, number | null> = {
   7: null,
 };
 
+interface LegendEntry {
+  code: ReadinessCode;
+  label: string;
+  description: string;
+}
+
+/** Meaning of each non-"no data" readiness code, worst to best, for the gauge legend. */
+export const READINESS_LEGEND: LegendEntry[] = [
+  { code: 6, label: 'REST!', description: 'Illness or stress detected' },
+  { code: 5, label: 'Rest', description: 'Time to recover' },
+  { code: 3, label: 'LIT!', description: 'Recovery incomplete' },
+  { code: 2, label: 'LIT', description: 'Low intensity training' },
+  { code: 4, label: 'Normal', description: 'Train as planned' },
+  { code: 1, label: 'HIT', description: 'Ready for intensive training' },
+];
+
 /** z-scores of the rMSSD-derived HRV and RHR at `rows[index]` against its trailing 30-day window. */
-function computeZScoresAt(rows: WellnessRow[], index: number): { hrvZ: number; rhrZ: number } {
+function computeZScoresAt(rows: WellnessRow[], index: number): ZScorePoint {
   const window = rows.slice(index, Math.min(index + 30, rows.length));
 
   const hrvValues = window.map((row) => 20 * Math.log(row.rmssd));
@@ -35,14 +58,14 @@ function computeZScoresAt(rows: WellnessRow[], index: number): { hrvZ: number; r
   return { hrvZ, rhrZ };
 }
 
-interface Classification {
+export interface Classification {
   code: ReadinessCode;
   label: string;
   detail: [string, string];
 }
 
 /** Ported 1:1 from the MATLAB getScore() decision tree; order matters, first match wins. */
-function classify(hrvZ: number, rhrZ: number): Classification {
+export function classify(hrvZ: number, rhrZ: number): Classification {
   if (Number.isNaN(rhrZ) || Number.isNaN(hrvZ)) {
     return { code: 7, label: '...?', detail: ['No HRV data today', 'Take a measurement.'] };
   }
@@ -96,15 +119,15 @@ export function computeReadiness(rows: WellnessRow[]): ReadinessResult {
 }
 
 /**
- * Readiness codes for the days before today (index 0 = yesterday, 1 = the day
- * before, ...), for drawing a fading trail of past needle positions on the gauge.
+ * HRV/RHR z-scores for today and the `trailDays` days before it (index 0 =
+ * today, 1 = yesterday, ...), for plotting the gauge's fading trail of past
+ * positions against the same continuous scale as today's marker.
  */
-export function computeReadinessTrail(rows: WellnessRow[], days: number): ReadinessCode[] {
-  const trailLength = Math.min(days, Math.max(rows.length - 1, 0));
-  const codes: ReadinessCode[] = [];
-  for (let i = 1; i <= trailLength; i++) {
-    const { hrvZ, rhrZ } = computeZScoresAt(rows, i);
-    codes.push(classify(hrvZ, rhrZ).code);
+export function computeZScoreSeries(rows: WellnessRow[], trailDays: number): ZScorePoint[] {
+  const length = Math.min(trailDays + 1, rows.length);
+  const series: ZScorePoint[] = [];
+  for (let i = 0; i < length; i++) {
+    series.push(computeZScoresAt(rows, i));
   }
-  return codes;
+  return series;
 }

@@ -1,6 +1,6 @@
 import './style.css';
 import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
-import { computeReadiness, computeReadinessTrail } from './score';
+import { computeReadiness, computeZScoreSeries } from './score';
 import { isConfigured, loadSettings, saveSettings } from './settings';
 import { requiredHistoryDays } from './trendChart';
 import { applyTheme, cycleTheme, loadTheme } from './theme';
@@ -62,7 +62,7 @@ async function loadDashboard(): Promise<void> {
   try {
     const rows = await fetchWellness(settings, oldest, today);
     const result = computeReadiness(rows);
-    const trail = computeReadinessTrail(rows, GAUGE_TRAIL_DAYS);
+    const [todayScores = { hrvZ: NaN, rhrZ: NaN }, ...trail] = computeZScoreSeries(rows, GAUGE_TRAIL_DAYS);
 
     let adviceStatus: AdviceStatus = { kind: 'disabled' };
     if (settings.sendTrainingAdvice) {
@@ -82,7 +82,7 @@ async function loadDashboard(): Promise<void> {
 
     renderDashboard(
       app!,
-      { settings, rows, result, trail, adviceStatus },
+      { settings, rows, result, todayScores, trail, adviceStatus },
       theme,
       { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard(), onToggleTheme: handleThemeToggle },
     );
