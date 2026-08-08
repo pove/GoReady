@@ -13,14 +13,19 @@
      var(--color-text) - which turns near-white in dark mode and all but
      disappears against those same light zones. */
   --gauge-ink: #111827;
-  /* Trend-chart status colors. Deliberately NOT themed: both clear 3:1 against
-     the light (#ffffff) and dark (#1f2937) card surfaces, so one pair works in
-     both modes. They are also only half the encoding - out-of-band bars are
-     hatched as well, because red and green differ by only about 4 dE under
-     deuteranopia and cannot carry this distinction by hue alone. */
-  --chart-in-band: #0ca30c;
-  --chart-out-of-band: #d03b3b;
-  --chart-out-of-band-hatch: #7d1f1f;
+  /* Trend-chart status colors: the original soft green/red, restored after a
+     detour through darker, fully-opaque versions chosen purely for contrast.
+     Deliberately NOT themed - the same pair reads fine translucent over both
+     the light (#ffffff) and dark (#1f2937) card surfaces. Hue is only half the
+     encoding, not the safety net: red and green differ by only about 4 dE
+     under deuteranopia, so out-of-band bars are additionally hatched, and
+     that hatch - not this pair - is what a colorblind reader actually relies
+     on. The bars' own low contrast against the surface is covered by the same
+     rule: values are printed directly on the notable bars (see
+     `labelledIndices` in trendChart.ts) rather than leaning on fill color. */
+  --chart-in-band: #4ade80;
+  --chart-out-of-band: #f87171;
+  --chart-out-of-band-hatch: #b91c1c;
   color-scheme: light;
 }
 
@@ -386,12 +391,16 @@ main {
   fill-opacity: 0.12;
 }
 
+/* Translucent, as the original bars were - a solid fill reads harsher/darker
+   than intended at this saturation. */
 .trend-bar-in {
   fill: var(--chart-in-band);
+  fill-opacity: 0.55;
 }
 
 .trend-bar-out {
   fill: var(--chart-out-of-band);
+  fill-opacity: 0.55;
 }
 
 .trend-hatch-line {
