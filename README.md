@@ -13,10 +13,7 @@ The scoring algorithm and readiness gauge are based on a MATLAB script
 originally written by **[@Inigo_Tolosa](https://forum.intervals.icu/u/Inigo_Tolosa)**
 on the intervals.icu forum — see the
 ["How-to guide: ImReady4 app for HRV-guided training"](https://forum.intervals.icu/t/how-to-guide-imready4-app-for-hrv-guided-training/25778)
-thread. All credit for the underlying method goes to them; this repo is just
-a TypeScript/web port. The gauge's polar-chart geometry was additionally
-checked against [ekr1/ImReady4Py](https://github.com/ekr1/ImReady4Py), a
-from-scratch Python port of the same tool.
+thread. All credit for the underlying method goes to them.
 
 There is no backend and no account system — it's a static single-page app.
 Your intervals.icu API key is kept in the browser's `sessionStorage` only
