@@ -28,9 +28,11 @@ sends, straight through to `https://intervals.icu/api/v1/...`, and forwards
 the response back. It never stores or reads your API key itself.
 
 There is no backend and no account system — it's a static single-page app.
-Your intervals.icu API key is kept in the browser's `sessionStorage` only
-(cleared when the tab closes) and is never sent anywhere except intervals.icu
-itself, via the small PHP proxy described below.
+Your intervals.icu API key is kept in the browser's `localStorage` only
+(so it survives closing the tab — you don't have to re-enter it every
+visit) and is never sent anywhere except intervals.icu itself, via the
+small PHP proxy described below. Use "clear site data" in your browser, or
+a private/incognito window, if you don't want it kept around.
 
 ## Readiness algorithm
 
@@ -38,12 +40,16 @@ For each of rMSSD and resting HR, today's value is turned into a z-score
 against the trailing 30-day mean/standard deviation (rMSSD is first
 log-transformed: `20 * ln(rMSSD)`, same as the original script). Those two
 z-scores are run through the same decision tree as the MATLAB version to
-produce one of: `HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`, or "no data".
-That result maps to a `TrainingAdvice` code (1-4) that gets written back to
-intervals.icu when "Write today's readiness back to intervals.icu" is enabled
-in settings. If intervals.icu already has a `TrainingAdvice` value for today
-(e.g. from an earlier refresh), GoReady leaves it alone instead of writing it
-again on every page load.
+produce one of: `HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`, or a seventh
+"no data" state (shown on screen as `...?`, when today has no HRV
+measurement or the trailing window has zero variability). Each of the six
+real results maps to a `TrainingAdvice` code from 1 (worst) to 4 (best); "no
+data" isn't one of them — it clears the field instead, sending an empty
+value rather than a number. That value gets written back to intervals.icu
+when "Write today's readiness back to intervals.icu" is enabled in settings.
+If intervals.icu already has a `TrainingAdvice` value for today (e.g. from
+an earlier refresh), GoReady leaves it alone instead of writing it again on
+every page load.
 
 The gauge plots today's HRV/RHR z-scores as a point on a polar chart (angle =
 RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
@@ -122,12 +128,13 @@ using Snapshot fields instead of the defaults), and the trend chart windows
 (short-term/long-term days, expected-range width in standard deviations).
 
 The button to the left of the gear icon cycles the color theme: system
-(default) → light → dark → system. The choice is kept in `sessionStorage`,
+(default) → light → dark → system. The choice is kept in `localStorage`,
 same as the rest of the settings.
 
-Settings are stored in `sessionStorage`, scoped to the browser tab — closing
-the tab clears them, so you'll re-enter them next visit. That's a deliberate
-simplicity trade-off for a single-athlete personal tool, not an oversight.
+Settings (including your API key) are stored in `localStorage`, scoped to
+the browser/origin — they survive closing the tab or the browser, so you
+only enter them once. Clear them from the browser's site data settings, or
+use a private/incognito window, if you'd rather they not persist.
 
 ## What changed from the MATLAB version
 

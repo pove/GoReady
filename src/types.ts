@@ -1,4 +1,4 @@
-/** User-configurable settings, persisted in sessionStorage (single athlete, no server-side account). */
+/** User-configurable settings, persisted in localStorage (single athlete, no server-side account). */
 export interface Settings {
   athleteId: string;
   apiKey: string;
