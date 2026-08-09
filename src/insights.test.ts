@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInsights, readinessConfidence, trainingPhaseNote, type Insight } from './insights';
+import { buildInsights, copingWellPersists, readinessConfidence, trainingPhaseNote, type Insight } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
 import { classify } from './score';
 import { wellnessSeries } from './testFixtures';
@@ -388,10 +388,13 @@ describe('buildInsights: the phase note against a thin baseline', () => {
   });
 
   it('still makes the note on a baseline that can support it', () => {
+    // "Not coping well" specifically, since it's the one branch with no
+    // additional taper/persistence gate - isolates this test to the
+    // confidence gate it's meant to check.
     const rows = series();
     const insights = buildInsights({
       code: 4,
-      hrvZ: -0.5,
+      hrvZ: -1.5,
       rhrZ: 0.7,
       rows,
       settings: DEFAULT_SETTINGS,
@@ -464,5 +467,92 @@ describe('buildInsights: recent measurement compliance', () => {
       confidence: readinessConfidence(twoDays),
     });
     expect(idsOf(insights)).not.toContain('recent-compliance');
+  });
+});
+
+describe('copingWellPersists', () => {
+  it('is false on an empty or too-short trail', () => {
+    expect(copingWellPersists([])).toBe(false);
+    expect(copingWellPersists([{ hrvZ: 0.5, rhrZ: -0.5 }])).toBe(false);
+  });
+
+  it('is true only when every day in the trail matches the coping-well pattern', () => {
+    const allMatch = [
+      { hrvZ: 0.5, rhrZ: -0.5 },
+      { hrvZ: 0.3, rhrZ: -0.4 },
+      { hrvZ: 0.6, rhrZ: -0.6 },
+    ];
+    expect(copingWellPersists(allMatch)).toBe(true);
+  });
+
+  it('is false when only some of the recent days match - a single lucky morning is not a pattern', () => {
+    const oneDayOnly = [
+      { hrvZ: 0.5, rhrZ: -0.5 }, // matches
+      { hrvZ: 2, rhrZ: 2 }, // does not
+      { hrvZ: 0.4, rhrZ: -0.4 }, // matches
+    ];
+    expect(copingWellPersists(oneDayOnly)).toBe(false);
+  });
+});
+
+describe("buildInsights: grounding the reference-chart phase note in more than its shape", () => {
+  // "Optimum pre-race" is geometrically a chart match here (rhrZ in (0,1],
+  // hrvZ in [-1,0)), but the literature behind it is about an actual taper,
+  // not any morning with these two numbers - see the comment on
+  // PRE_RACE_TAPER_RAMP_CEILING.
+  it('withholds "optimum pre-race" without evidence load is actually tapering', () => {
+    const rows = series(); // rampRate defaults to NaN - no load data at all
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: -0.5,
+      rhrZ: 0.7,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(idsOf(insights)).not.toContain('phase-note');
+  });
+
+  it('withholds "optimum pre-race" when load is still climbing, not tapering', () => {
+    const rows = series({ extras: { rampRate: 4 } });
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: -0.5,
+      rhrZ: 0.7,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(idsOf(insights)).not.toContain('phase-note');
+  });
+
+  it('makes the "optimum pre-race" note once load is actually coming down', () => {
+    const rows = series({ extras: { rampRate: -2 } });
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: -0.5,
+      rhrZ: 0.7,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(find(insights, 'phase-note')!.text).toMatch(/optimum pre-race/);
+  });
+
+  // "Coping well" is geometrically a chart match here too, but Plews' case
+  // studies behind it are about season-long stability - a plain, unremarkable
+  // week (the default `series()` fixture) shouldn't retroactively count as
+  // "coping well" just because today's two numbers happen to match.
+  it('withholds "coping well" when the pattern is only true of today, not the recent trail', () => {
+    const rows = series(); // an ordinary week, not a sustained calm-RHR/strong-HRV run
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: 0.8,
+      rhrZ: -0.6,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(idsOf(insights)).not.toContain('phase-note');
   });
 });

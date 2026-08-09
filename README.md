@@ -134,8 +134,20 @@ does not read as reassurance.
   boundary) the code uses it exactly; where the source diagram has no finer
   gridlines to read, the closest achievable estimate is used, rounded toward
   the narrower side so nothing is claimed that the chart doesn't actually
-  show. Suppressed on an unusable baseline, being the one rule that reads
-  today's single-day z-scores.
+  show. Matching the chart's shape isn't the same as the label being
+  physiologically sound on its own, so two of the three carry an extra gate:
+  "optimum pre-race" only fires with evidence load is actually coming down
+  (`rampRate <= 0`) — the supporting literature ties this pattern to a real
+  taper, not to any morning with these two numbers, which dehydration,
+  caffeine, or a bad night's sleep could produce just as easily. "Coping well"
+  only fires once the pattern has held for 3 days running — its supporting
+  case studies (elite rowers and triathletes) are about HRV staying stable
+  across a season, not one lucky morning. "Not coping well" needed no such
+  gate: elevated resting HR with falling HRV is the sympathetic-overtraining
+  signature described in the ECSS/ACSM joint consensus statement on
+  overtraining syndrome (Meeusen et al., 2013), well-supported as an acute
+  marker on its own. Suppressed on an unusable baseline, being the one rule
+  that reads today's single-day z-scores.
 - **7-day mean vs the 60-day baseline**, with a smallest-worthwhile-change band
   of half the baseline SD. Single mornings are noise; several days averaged is
   what tracks performance (Plews & Buchheit, 2013).
