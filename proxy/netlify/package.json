@@ -1,0 +1,6 @@
+{
+  "name": "goready-proxy-netlify",
+  "private": true,
+  "version": "1.0.0",
+  "description": "GoReady's intervals.icu reverse proxy, as a Netlify Function."
+}
