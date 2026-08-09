@@ -256,16 +256,20 @@ main {
   stroke: none;
 }
 
-/* Reticle framing today's exact point - see the comment on renderToday in
-   gauge.ts for why this replaced an earlier ring+dot design. */
-.gauge-today-tick line {
+/* Today's marker: two unfilled, concentric rings - see the comment on
+   renderToday in gauge.ts for why this replaced two earlier designs. Fixed
+   colors rather than themed ones, same reasoning as --gauge-ink: the zones
+   underneath are always pastel, in both themes. */
+.gauge-today-ring-outer {
+  fill: none;
+  stroke: #1e3a8a;
   stroke-width: 2;
-  stroke-linecap: round;
 }
 
-.gauge-today-dot {
-  stroke: var(--gauge-ink);
-  stroke-width: 1;
+.gauge-today-ring-inner {
+  fill: none;
+  stroke: #7dd3fc;
+  stroke-width: 1.5;
 }
 
 .gauge-center-badge {

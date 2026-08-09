@@ -33,20 +33,18 @@ const SCALE = 11;
  * painted point is a wedge tip at rhrZ = +-Z_LIMIT, hrvZ = -Z_LIMIT, using
  * the same `y = CENTER_Y - radius * cos(theta)` formula as zScoreToPoint:
  *   CENTER_Y - (RADIUS_OFFSET + Z_LIMIT) * SCALE * cos(135deg) = 180.
- * Today's marker can sit on that same tip and its ticks reach
- * TODAY_TICK_OUTER_RADIUS beyond it, so the real lower bound is
- * 180 + TODAY_TICK_OUTER_RADIUS + half its stroke width; round up from there.
+ * Today's marker can sit on that same tip and draws a ring of radius
+ * TODAY_RING_OUTER_RADIUS around it, so the real lower bound is
+ * 180 + TODAY_RING_OUTER_RADIUS + half its stroke width; round up from there.
  */
 const VIEWBOX_HEIGHT = 189;
 
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
-/** Gap between today's exact point and where each crosshair tick starts, so the ticks frame the point instead of converging on top of it. */
-const TODAY_TICK_INNER_RADIUS = 3;
-/** How far each tick reaches from the center point. Bigger than the trail's own max dot radius (4), so today's marker still reads as the most prominent thing on the chart. */
-const TODAY_TICK_OUTER_RADIUS = 8;
-/** Small on purpose: it identifies today's exact coordinate and carries the zone color, while the ticks - not this dot - are what makes the marker read as distinct from a trail dot. */
-const TODAY_DOT_RADIUS = 1.5;
+/** Bigger than the trail's own max dot radius (4), so today's marker still reads as the most prominent thing on the chart. */
+const TODAY_RING_OUTER_RADIUS = 7;
+/** Smaller ring nested inside the outer one, in a lighter shade, so the two together read as a distinct two-tone target rather than a single ring easily confused with a trail dot. */
+const TODAY_RING_INNER_RADIUS = 4;
 
 function clampZ(z: number): number {
   return Math.max(-Z_LIMIT, Math.min(Z_LIMIT, z));
@@ -195,28 +193,20 @@ function renderCenterBadge(result: ReadinessResult): string {
 
 /**
  * Renders today's marker at its true HRV/RHR position, or nothing if today has
- * no HRV data (code 7). A reticle - four short ticks framing the point, with
- * a gap at the center - rather than a solid ring: an earlier ring+dot design
- * still read as "just another circle" competing with the trail's own dots,
- * and a filled ring painted over whatever the trail drew underneath it,
- * quietly erasing a trail dot whenever a previous day sat close to today's
- * position. Ticks are a different shape entirely, are mostly empty space, and
- * never cover the exact point where a trail dot could be sitting.
+ * no HRV data (code 7). Two concentric transparent rings, a lighter one
+ * nested inside a darker one, rather than a filled marker: a filled shape
+ * (first a solid halo, then a reticle) either painted over whatever the trail
+ * drew underneath it or read as visually noisy next to the trail's own dots.
+ * Unfilled rings let a trail dot underneath keep showing through, while the
+ * two-tone outline still reads clearly against every pastel zone color.
  */
-function renderToday(today: ZScorePoint, color: string): string {
+function renderToday(today: ZScorePoint): string {
   if (Number.isNaN(today.hrvZ) || Number.isNaN(today.rhrZ)) return '';
 
   const { x, y } = zScoreToPoint(today.rhrZ, today.hrvZ);
-  const inner = TODAY_TICK_INNER_RADIUS;
-  const outer = TODAY_TICK_OUTER_RADIUS;
   return `
-    <g class="gauge-today-tick" stroke="${color}">
-      <line x1="${x.toFixed(2)}" y1="${(y - outer).toFixed(2)}" x2="${x.toFixed(2)}" y2="${(y - inner).toFixed(2)}" />
-      <line x1="${x.toFixed(2)}" y1="${(y + inner).toFixed(2)}" x2="${x.toFixed(2)}" y2="${(y + outer).toFixed(2)}" />
-      <line x1="${(x - outer).toFixed(2)}" y1="${y.toFixed(2)}" x2="${(x - inner).toFixed(2)}" y2="${y.toFixed(2)}" />
-      <line x1="${(x + inner).toFixed(2)}" y1="${y.toFixed(2)}" x2="${(x + outer).toFixed(2)}" y2="${y.toFixed(2)}" />
-    </g>
-    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${TODAY_DOT_RADIUS}" fill="${color}" class="gauge-today-dot" />
+    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${TODAY_RING_OUTER_RADIUS}" class="gauge-today-ring-outer" />
+    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${TODAY_RING_INNER_RADIUS}" class="gauge-today-ring-inner" />
   `;
 }
 
@@ -244,7 +234,7 @@ export function renderGauge(result: ReadinessResult, today: ZScorePoint, trail: 
       ${renderGrid()}
       ${renderTrail(trail)}
       ${renderCenterBadge(result)}
-      ${renderToday(today, result.color)}
+      ${renderToday(today)}
     </svg>
   `;
 }
