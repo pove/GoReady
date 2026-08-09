@@ -111,41 +111,77 @@ const MIN_ARTIFACT_PERCENT = 25;
 // ---------------------------------------------------------------------------
 
 /**
- * Minimum |rhrZ| before "resting HR is up/calm" is a claim worth making at
- * all. A z-score of, say, 0.05 is noise around the 30-day baseline, not a
- * real deviation - without this floor, a day that's essentially sitting on
- * the baseline (visually right near the gauge's center) could still get
- * told its RHR is "up", which contradicts what the gauge itself shows.
+ * Below this, rhrZ is noise around the 30-day baseline, not a real deviation -
+ * a statistical margin GoReady adds itself, not read from the chart. Without
+ * it, a day essentially sitting on the baseline (visually right at the
+ * gauge's center) could still get told its RHR is "up", contradicting what
+ * the gauge itself shows.
  */
-const MIN_ACTIVATION = 0.5;
-/** Roughly matches the hatched regions' angular (RHR z-score) extent in the reference chart. */
-const ACTIVATION_BAND = 1.3;
-/** hrvZ threshold separating "HRV still holding up" from "HRV starting to slip". */
-const STRONG_HRV = 0.5;
+const ACTIVATION_NOISE_FLOOR = 0.2;
+
+/**
+ * The rest of these six constants come from pixel-measuring the actual
+ * reference chart image (public/readiness-chart-reference.jpg) rather than
+ * guessing - cropped and zoomed on the hatched regions, using the chart's own
+ * printed axis ticks and the already-known classify() zone boundaries as
+ * calibration points. Cross-checked against an independent Python port of the
+ * same chart (github.com/lennart-rth, based on the same credited forum
+ * author's work): it implements the five real zones but doesn't attempt these
+ * three named regions at all, confirming they were never a formula even in
+ * the original source - this is the ceiling of achievable precision, not a
+ * shortfall.
+ *
+ * "Chart-verified" below means aligned to a printed tick or an existing
+ * classify() threshold. "Best estimate" means the closest reading achievable
+ * from a compressed, hand-illustrated diagram with no finer gridlines at that
+ * point - rounded toward the narrower/more conservative side, so this never
+ * claims a region the chart doesn't actually show.
+ */
+
+/** Chart-verified: "optimum pre-race" and "not coping well" share this exact angular span, aligned to the chart's own "1" tick. */
+const PRE_RACE_NOT_COPING_MAX_RHR = 1;
+/**
+ * Chart-verified: the same hrvZ threshold classify() already uses for the
+ * Normal/LimitIntensity boundary (score.ts) - both hatched wedges in the
+ * source image share this exact edge. Duplicated here rather than imported,
+ * since classify() is a 1:1 MATLAB port not meant to be restructured; a
+ * regression test proves the two stay in sync.
+ */
+const NORMAL_LIMIT_HRV_BOUNDARY = -1;
+/** Best estimate: how far "optimum pre-race" extends past that shared boundary before the chart goes back to plain Normal. */
+const PRE_RACE_HRV_CEILING = 0;
+/** Best estimate: how far "not coping well" extends past that shared boundary before the chart goes back to plain LimitIntensity. */
+const NOT_COPING_HRV_FLOOR = -2;
+
+/** Chart-verified shape, deliberately NOT symmetric with the right side: this wedge is visibly narrower in the source image and doesn't reach the LimitIntensity boundary. */
+const COPING_WELL_MIN_RHR = -0.7;
+/** Best estimate: this wedge's own radial extent, well short of the LimitIntensity boundary. */
+const COPING_WELL_HRV_FLOOR = 0;
 
 /**
  * Supplementary, qualitative read on *where* today's point sits within the
  * HIT/Normal zone, based on three named regions on the reference readiness
  * chart (see the forum thread credited in the README, and the in-app help
  * dialog which shows that chart): "optimum pre-race", "not coping well
- * during loading", and "coping well during training blocks".
- *
- * These bands are this app's own approximate reading of that diagram's
- * layout relative to its axis ticks - not part of Inigo Tolosa's original
- * scoring algorithm.
+ * during loading", and "coping well during training blocks" - not part of
+ * Inigo Tolosa's original scoring algorithm.
  */
 export function trainingPhaseNote(code: ReadinessCode, hrvZ: number, rhrZ: number): string | null {
   if (code !== 1 && code !== 4) return null; // only refines HIT / Normal
   if (Number.isNaN(hrvZ) || Number.isNaN(rhrZ)) return null;
 
-  if (rhrZ > MIN_ACTIVATION && rhrZ <= ACTIVATION_BAND) {
-    return hrvZ >= STRONG_HRV
-      ? 'Resting HR is up but HRV is still strong - this pattern looks like "optimum pre-race": primed, not fatigued.'
-      : 'Resting HR is up and HRV is starting to slip - a sign you may not be coping well with recent loading.';
+  if (rhrZ > ACTIVATION_NOISE_FLOOR && rhrZ <= PRE_RACE_NOT_COPING_MAX_RHR) {
+    if (hrvZ >= NORMAL_LIMIT_HRV_BOUNDARY && hrvZ < PRE_RACE_HRV_CEILING) {
+      return 'Resting HR is up but HRV is still strong - this pattern looks like "optimum pre-race": primed, not fatigued.';
+    }
+    if (hrvZ < NORMAL_LIMIT_HRV_BOUNDARY && hrvZ >= NOT_COPING_HRV_FLOOR) {
+      return 'Resting HR is up and HRV is starting to slip - a sign you may not be coping well with recent loading.';
+    }
+    return null; // outside both hatched bands in the source chart - it doesn't label this area either
   }
 
-  if (rhrZ < -MIN_ACTIVATION && rhrZ >= -ACTIVATION_BAND && hrvZ >= STRONG_HRV) {
-    return 'Resting HR is calm and HRV is strong - a sign you\'re coping well with the current training block.';
+  if (rhrZ < -ACTIVATION_NOISE_FLOOR && rhrZ >= COPING_WELL_MIN_RHR && hrvZ >= COPING_WELL_HRV_FLOOR) {
+    return "Resting HR is calm and HRV is strong - a sign you're coping well with the current training block.";
   }
 
   return null;
