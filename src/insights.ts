@@ -289,6 +289,12 @@ function artifactRule(hrv: HrvMetric): Insight | null {
  * appear once several days are averaged (Plews & Buchheit, 2013).
  */
 function swcRule(hrv: HrvMetric): Insight | null {
+  // The rolling mean tolerates gaps elsewhere in the window, but not here: with
+  // no reading today, "you are absorbing the recent work" reads as a claim
+  // about today specifically, sitting right below a headline saying today has
+  // no data at all.
+  if (Number.isNaN(hrv.ln[0])) return null;
+
   const summary = summarize(hrv.ln);
   if (!summary.usable) return null;
 
@@ -334,6 +340,8 @@ function swcRule(hrv: HrvMetric): Insight | null {
  * the system is not so much stable as unresponsive.
  */
 function cvRule(hrv: HrvMetric): Insight | null {
+  if (Number.isNaN(hrv.ln[0])) return null; // see the same guard in swcRule
+
   const recentCv = rollingCv(hrv.ln, RECENT_WINDOW);
   if (Number.isNaN(recentCv)) return null;
   if (validCount(windowAt(hrv.ln, RECENT_WINDOW)) < MIN_RECENT_DAYS) return null;
@@ -412,6 +420,10 @@ function streakRules(hrv: HrvMetric, rows: WellnessRow[], settings: Settings): I
  * catches the slower one.
  */
 function couplingRule(hrv: HrvMetric, rows: WellnessRow[]): Insight | null {
+  // Coupling is a same-day pattern by definition - both readings need to exist
+  // today for a claim about how they relate today to mean anything.
+  if (Number.isNaN(hrv.ln[0]) || Number.isNaN(rows[0]?.rhr)) return null;
+
   const hrvSummary = summarize(hrv.ln);
   const rhrSummary = summarize(rows.map((r) => r.rhr));
   if (!hrvSummary.usable || !rhrSummary.usable) return null;

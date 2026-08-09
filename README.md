@@ -46,7 +46,9 @@ measurement or the trailing window has zero variability). Each of the six
 real results maps to a `TrainingAdvice` code from 1 (worst) to 4 (best); "no
 data" isn't one of them — it clears the field instead, sending an empty
 value rather than a number. That value gets written back to intervals.icu
-when "Write today's readiness back to intervals.icu" is enabled in settings.
+when "Write today's readiness back to intervals.icu" is enabled in settings;
+the on-screen banner says "cleared" rather than "sent" on a no-data day, since
+nothing was actually sent.
 If intervals.icu already has a `TrainingAdvice` value for today (e.g. from
 an earlier refresh), GoReady leaves it alone instead of writing it again on
 every page load.

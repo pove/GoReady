@@ -195,6 +195,40 @@ describe('buildInsights: reading HRV and resting HR together', () => {
   });
 });
 
+// Regression: the readiness code goes to 7 ("No HRV data today") specifically
+// when today's own reading is missing, but swcRule/cvRule/couplingRule computed
+// their 7-day windows tolerating gaps ANYWHERE in the window - including at
+// today - so they could still fire right below that headline. artifactRule
+// already guarded on today's own value; the other three didn't.
+describe('buildInsights: no reading yet today', () => {
+  /** A week that would clearly trigger swc/cv/coupling insights, except today's HRV is missing. */
+  const missingToday = (overrides: SeriesOptions = {}) => {
+    const rows = series({ recentRmssd: 30, recentRhr: 44, recentAmplitude: 14, ...overrides });
+    return rows.map((row, i) => (i === 0 ? { ...row, rmssd: NaN } : row));
+  };
+
+  it('withholds the 7-day-average insight without today\'s own reading', () => {
+    const ids = idsOf(insightsFor(missingToday()));
+    expect(ids).not.toContain('swc-below');
+    expect(ids).not.toContain('swc-above');
+    expect(ids).not.toContain('swc-stable');
+  });
+
+  it('withholds the coefficient-of-variation insight without today\'s own reading', () => {
+    const ids = idsOf(insightsFor(missingToday()));
+    expect(ids).not.toContain('cv-widened');
+    expect(ids).not.toContain('cv-collapsed');
+  });
+
+  it('withholds the HRV/RHR coupling insight without today\'s own HRV reading', () => {
+    expect(idsOf(insightsFor(missingToday()))).not.toContain('coupling');
+  });
+
+  it('still fires normally once today has a reading', () => {
+    expect(idsOf(insightsFor(series({ recentRmssd: 30 })))).toContain('swc-below');
+  });
+});
+
 describe('buildInsights: context for a poor reading', () => {
   it('offers a short night as context', () => {
     const rows = series({ recentRmssd: 38, extras: { sleepSecs: 4.5 * 3600 } });
