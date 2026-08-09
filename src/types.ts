@@ -83,14 +83,18 @@ export interface ReadinessResult {
 
 /**
  * Outcome of trying to sync today's readiness to intervals.icu's "TrainingAdvice"
- * field. `cleared` is distinct from `sent`: on a "no data yet" day there is no
- * advice code to send, so the field is blanked instead (see `computeReadiness`'s
- * `adviceCode: null` for code 7) - a banner claiming advice was "sent" would be
- * announcing something that didn't happen.
+ * field. `no-data` is distinct from `disabled`: the setting is on, but there is
+ * no advice code yet to send (see `computeReadiness`'s `adviceCode: null` for
+ * code 7) - nothing is written at all, so a stale value from an earlier state
+ * of the day is left alone rather than being overwritten with an empty clear
+ * that may not even round-trip through intervals.icu as blank. Once a real
+ * code is available, it is written unconditionally rather than only when
+ * nothing was stored yet - see `main.ts` - so that earlier state can never
+ * block it.
  */
 export type AdviceStatus =
   | { kind: 'disabled' }
+  | { kind: 'no-data' }
   | { kind: 'already-set' }
   | { kind: 'sent' }
-  | { kind: 'cleared' }
   | { kind: 'error'; message: string };

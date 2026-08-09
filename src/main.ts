@@ -1,4 +1,5 @@
 import './style.css';
+import { decideAdviceAction } from './advice';
 import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
 import { readinessConfidence } from './insights';
 import { computeReadiness, computeZScoreSeries } from './score';
@@ -70,16 +71,13 @@ async function loadDashboard(): Promise<void> {
     // exactly what it would have been before the badge existed.
     let adviceStatus: AdviceStatus = { kind: 'disabled' };
     if (settings.sendTrainingAdvice) {
-      // intervals.icu already has a value for today: sending it again on every
-      // refresh would just be a redundant write, so leave it alone.
-      if (rows[0]?.trainingAdvice) {
-        adviceStatus = { kind: 'already-set' };
+      const decision = decideAdviceAction(result.adviceCode, rows[0]?.trainingAdvice);
+      if (decision.action === 'skip') {
+        adviceStatus = decision.status;
       } else {
         try {
           await putTrainingAdvice(settings, today, result.adviceCode);
-          // No data yet blanks the field rather than sending a real code (see
-          // `AdviceStatus`) - "sent" would misreport that as advice going out.
-          adviceStatus = result.adviceCode === null ? { kind: 'cleared' } : { kind: 'sent' };
+          adviceStatus = decision.status;
         } catch (error) {
           adviceStatus = { kind: 'error', message: describeError(error) };
         }
