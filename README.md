@@ -189,6 +189,28 @@ builds the app and publishes `dist/` to GitHub Pages on every push to `main`.
 To enable it, go to the repo's **Settings → Pages** and set the source to
 "GitHub Actions".
 
+## Installing as an app
+
+GoReady is a installable PWA: on Android, Chrome shows an "Install app" prompt
+(or use the browser menu → "Install app"); on iPhone, use Safari's Share sheet
+→ "Add to Home Screen". Either way it launches full-screen, without browser
+chrome, and its icon/name follow whatever's set in `vite.config.ts`'s
+`VitePWA({ manifest: ... })`.
+
+The icon artwork lives in one place, `public/favicon.svg` — running
+`npm run generate-pwa-assets` regenerates every derived size (192/512,
+maskable, apple-touch-icon, favicon.ico) into `public/` from that one file via
+[`@vite-pwa/assets-generator`](https://vite-pwa-org.netlify.app/assets-generator/).
+Regenerate and commit the results whenever the source SVG changes; this isn't
+run automatically as part of `npm run build`.
+
+The generated service worker precaches only this build's own `dist/` output
+(the app shell), so the app still opens offline. It never caches intervals.icu
+requests through the proxy — those always hit the network and fail through to
+the app's existing error screen when offline, the same as before this feature
+existed. Serving a cached wellness reading as if it were today's would be
+actively wrong, not just stale.
+
 ## Deploying the proxy
 
 Four drop-in options, in [`proxy/`](proxy) — PHP (any PHP host), JavaScript
