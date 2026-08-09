@@ -337,6 +337,36 @@ function renderInsights(insights: Insight[]): string {
   return `<ul class="insights">${items}</ul>`;
 }
 
+/**
+ * A standing reminder of what this score cannot see, shown collapsed on every
+ * visit rather than as a data-driven insight. HRV/RHR read autonomic recovery
+ * only - not the muscular, tendon, or joint fatigue a hard or long session
+ * leaves behind, which recovers on a different timescale entirely and often
+ * outlasts the autonomic system's own bounce-back. An attempt to detect that
+ * from the data (elevation loss, pace variability, decoupling) was tested
+ * against real activity history and didn't hold up: the metrics that looked
+ * promising in theory came in BELOW baseline on the exact hard session they
+ * were meant to catch, contaminated by heat and workout type. Rather than
+ * ship an auto-firing rule that misses the case it exists for, this just says
+ * the honest thing plainly, every time - go by how your legs and joints
+ * actually feel, not only by this score.
+ */
+function renderScoreLimitsNote(): string {
+  return `
+    <details class="score-limits-toggle">
+      <summary>What this score measures</summary>
+      <p>
+        This score reflects autonomic recovery - how well your nervous
+        system has bounced back, based on resting heart rate and HRV.
+        Muscle, tendon, and joint recovery from previous training follow
+        their own, often slower timeline. For the fullest picture, weigh
+        this score alongside how your legs and joints actually feel,
+        especially after a long or hard session.
+      </p>
+    </details>
+  `;
+}
+
 function renderAdviceBanner(status: AdviceStatus): string {
   switch (status.kind) {
     case 'sent':
@@ -405,6 +435,7 @@ export function renderDashboard(
           </div>
           ${renderConfidenceBadge(confidence)}
           ${renderInsights(insights)}
+          ${renderScoreLimitsNote()}
         </section>
 
         <dialog id="gauge-help-dialog" class="gauge-help-dialog">
