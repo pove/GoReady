@@ -591,6 +591,38 @@ main {
   flex-shrink: 0;
 }
 
+.settings-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0.4rem 0 0.75rem;
+}
+
+.backfill-tool {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.backfill-tool label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.backfill-tool input[type='number'] {
+  width: 4.5rem;
+  margin-top: 0;
+}
+
+.backfill-result {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
 .advanced summary {
   cursor: pointer;
   font-weight: 600;

@@ -112,6 +112,41 @@ describe('computeReadiness', () => {
   });
 });
 
+// `index` lets computeReadiness recompute what a *past* day's readiness was,
+// for backfill.ts. Today's own callers all pass a single argument, so this
+// must stay exactly equivalent to today's behavior at index 0.
+describe('computeReadiness with an explicit index', () => {
+  it('defaults to index 0, identical to calling it with one argument', () => {
+    const rows = [row('2026-08-03', 50, 90), row('2026-08-02', 60, 70), row('2026-08-01', 55, 80)];
+    expect(computeReadiness(rows, 0)).toEqual(computeReadiness(rows));
+  });
+
+  it('classifies a past day from its own trailing 30-day window, not from index 0', () => {
+    const rows = [
+      row('2026-08-03', 50, 70), // today: unremarkable
+      row('2026-08-02', 52, 90), // yesterday: a real HRV spike
+      ...Array.from({ length: 29 }, (_, i) => row(`2026-06-${(i % 28) + 1}`, 48 + (i % 5), 70)),
+    ];
+
+    const hrvValues = rows.slice(1, 31).map((r) => 20 * Math.log(r.rmssd));
+    const rhrValues = rows.slice(1, 31).map((r) => r.rhr);
+    const hrvZ = (hrvValues[0] - mean(hrvValues)) / populationStd(hrvValues);
+    const rhrZ = (rhrValues[0] - mean(rhrValues)) / populationStd(rhrValues);
+    const expected = classify(hrvZ, rhrZ);
+
+    const result = computeReadiness(rows, 1);
+
+    expect(result.code).toBe(expected.code);
+    expect(result.adviceCode).not.toBeNull();
+  });
+
+  it('returns the no-data result for an index at or past the end of history, instead of throwing', () => {
+    const rows = [row('2026-08-03', 50, 70), row('2026-08-02', 55, 72)];
+    expect(computeReadiness(rows, 2)).toMatchObject({ code: 7, adviceCode: null });
+    expect(computeReadiness(rows, 99)).toMatchObject({ code: 7, adviceCode: null });
+  });
+});
+
 describe('computeZScoreSeries', () => {
   it('returns one entry (today) when trailDays is 0', () => {
     const rows = [row('2026-08-03', 50, 70), row('2026-08-02', 55, 72)];

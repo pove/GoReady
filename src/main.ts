@@ -1,13 +1,14 @@
 import './style.css';
 import { decideAdviceAction } from './advice';
 import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
+import { planBackfill } from './backfill';
 import { readinessConfidence } from './insights';
 import { computeReadiness, computeZScoreSeries } from './score';
 import { isConfigured, loadSettings, saveSettings } from './settings';
 import { requiredHistoryDays } from './trendChart';
 import { applyTheme, cycleTheme, loadTheme } from './theme';
 import { renderDashboard, renderSettingsForm, showError, showLoading, updateThemeButton } from './ui';
-import type { AdviceStatus } from './types';
+import type { AdviceStatus, BackfillStatus, WellnessRow } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('#app root element not found');
@@ -18,6 +19,17 @@ applyTheme(theme);
 
 /** How many previous days' needle positions to fade into the gauge as a trail. */
 const GAUGE_TRAIL_DAYS = 6;
+
+/**
+ * How many days before today the automatic catch-up checks/corrects on every
+ * load, in case the app wasn't opened for a bit. Hardcoded rather than a
+ * Settings field, same treatment as GAUGE_TRAIL_DAYS: bounds worst-case PUT
+ * volume on every single load (this reruns forever, not just once) and keeps
+ * a first-time install from rewriting a large stretch of pre-existing
+ * TrainingAdvice history. The Settings screen's manual tool covers catching
+ * up further than this on demand.
+ */
+const BACKFILL_WINDOW_DAYS = 7;
 
 function handleThemeToggle(): void {
   theme = cycleTheme(theme);
@@ -42,6 +54,27 @@ function describeError(error: unknown): string {
   return 'Something went wrong. Please try again.';
 }
 
+/**
+ * Writes whatever `planBackfill` decides the last `windowDays` days need,
+ * sequentially and awaited one at a time - never `Promise.all` - since this is
+ * a burst-avoidance requirement, not a correctness one (each PUT targets a
+ * different date and none depend on another's result). One day's failure
+ * doesn't stop the rest; it's just counted.
+ */
+async function runBackfill(rows: WellnessRow[], windowDays: number): Promise<{ succeeded: number; failed: number }> {
+  let succeeded = 0;
+  let failed = 0;
+  for (const write of planBackfill(rows, windowDays)) {
+    try {
+      await putTrainingAdvice(settings, write.date, write.adviceCode);
+      succeeded++;
+    } catch {
+      failed++;
+    }
+  }
+  return { succeeded, failed };
+}
+
 function openSettings(firstRun: boolean): void {
   renderSettingsForm(app!, settings, theme, {
     firstRun,
@@ -52,6 +85,12 @@ function openSettings(firstRun: boolean): void {
     },
     onCancel: firstRun ? undefined : () => void loadDashboard(),
     onToggleTheme: handleThemeToggle,
+    onBackfillNow: firstRun
+      ? undefined
+      : async (days) => {
+          const rows = await fetchWellness(settings, formatDate(daysAgo(days)), formatDate(new Date()));
+          return runBackfill(rows, days);
+        },
   });
 }
 
@@ -70,6 +109,7 @@ async function loadDashboard(): Promise<void> {
     // Confidence is shown, never acted on: the advice sent to intervals.icu is
     // exactly what it would have been before the badge existed.
     let adviceStatus: AdviceStatus = { kind: 'disabled' };
+    let backfillStatus: BackfillStatus = { kind: 'ok' };
     if (settings.sendTrainingAdvice) {
       const decision = decideAdviceAction(result.adviceCode, rows[0]?.trainingAdvice);
       if (decision.action === 'skip') {
@@ -82,11 +122,18 @@ async function loadDashboard(): Promise<void> {
           adviceStatus = { kind: 'error', message: describeError(error) };
         }
       }
+
+      // Uses the history already fetched above - no extra API reads. Silent
+      // on success, same as today's own write when nothing needed changing;
+      // a failure gets its own small banner rather than stomping on
+      // adviceStatus, which by now already reflects today's real outcome.
+      const { failed } = await runBackfill(rows, BACKFILL_WINDOW_DAYS);
+      backfillStatus = failed > 0 ? { kind: 'error', count: failed } : { kind: 'ok' };
     }
 
     renderDashboard(
       app!,
-      { settings, rows, result, todayScores, trail, adviceStatus, confidence },
+      { settings, rows, result, todayScores, trail, adviceStatus, backfillStatus, confidence },
       theme,
       { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard(), onToggleTheme: handleThemeToggle },
     );

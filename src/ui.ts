@@ -7,6 +7,7 @@ import type { ThemePreference } from './theme';
 import { renderTrendChart, renderTrendLegend } from './trendChart';
 import type {
   AdviceStatus,
+  BackfillStatus,
   HrvMetricDisplay,
   ReadinessResult,
   Settings,
@@ -162,6 +163,8 @@ interface SettingsFormHandlers {
   onSave: (settings: Settings) => void;
   onCancel?: () => void;
   onToggleTheme: () => void;
+  /** Runs the last `days` days' worth of catch-up on demand. Undefined on first run - nothing to catch up on before the account is even connected. */
+  onBackfillNow?: (days: number) => Promise<{ succeeded: number; failed: number }>;
 }
 
 export function renderSettingsForm(
@@ -197,6 +200,23 @@ export function renderSettingsForm(
             <input type="checkbox" name="sendTrainingAdvice" ${settings.sendTrainingAdvice ? 'checked' : ''} />
             Write today's readiness back to intervals.icu ("TrainingAdvice" field)
           </label>
+          <p class="settings-hint">
+            Every load also quietly corrects the last 7 days automatically, in case
+            you missed opening the app for a bit.
+          </p>
+          ${
+            !handlers.firstRun
+              ? `
+          <div class="backfill-tool">
+            <label>Update past days
+              <input type="number" id="backfill-days" min="1" max="90" value="7" />
+            </label>
+            <button type="button" id="backfill-run" class="btn-secondary" ${settings.sendTrainingAdvice ? '' : 'disabled'}>Run</button>
+            <span id="backfill-result" class="backfill-result"></span>
+          </div>
+          `
+              : ''
+          }
         </fieldset>
 
         <details class="advanced">
@@ -259,6 +279,48 @@ export function renderSettingsForm(
 
   container.querySelector<HTMLButtonElement>('#settings-cancel')?.addEventListener('click', () => handlers.onCancel?.());
   attachHeaderHandlers(container, handlers.onToggleTheme);
+  attachBackfillTool(container, form, handlers);
+}
+
+/**
+ * The "Update past days" tool is a deliberate, explicit action, unlike the
+ * silent automatic catch-up in main.ts - so unlike that one, this always
+ * reports what happened. Disabled alongside the "write advice back" checkbox
+ * (live, not just at render time) since running it while that's off would
+ * write intervals.icu data the rest of the settings say not to touch.
+ */
+function attachBackfillTool(container: HTMLElement, form: HTMLFormElement, handlers: SettingsFormHandlers): void {
+  const runBtn = container.querySelector<HTMLButtonElement>('#backfill-run');
+  const daysInput = container.querySelector<HTMLInputElement>('#backfill-days');
+  const result = container.querySelector<HTMLSpanElement>('#backfill-result');
+  const sendAdviceCheckbox = form.querySelector<HTMLInputElement>('input[name="sendTrainingAdvice"]');
+  if (!runBtn || !daysInput || !result) return;
+
+  sendAdviceCheckbox?.addEventListener('change', () => {
+    runBtn.disabled = !sendAdviceCheckbox.checked;
+  });
+
+  runBtn.addEventListener('click', async () => {
+    const days = Math.trunc(Number(daysInput.value));
+    if (!handlers.onBackfillNow || !(days > 0)) return;
+
+    runBtn.disabled = true;
+    result.textContent = 'Running...';
+    try {
+      const { succeeded, failed } = await handlers.onBackfillNow(days);
+      if (succeeded === 0 && failed === 0) {
+        result.textContent = 'Already up to date.';
+      } else if (failed === 0) {
+        result.textContent = `Updated ${succeeded} day${succeeded === 1 ? '' : 's'}.`;
+      } else {
+        result.textContent = `Updated ${succeeded}; ${failed} failed.`;
+      }
+    } catch {
+      result.textContent = 'Could not reach intervals.icu.';
+    } finally {
+      runBtn.disabled = !(sendAdviceCheckbox?.checked ?? true);
+    }
+  });
 }
 
 function readHrvMetricsToShow(value: FormDataEntryValue | null): HrvMetricDisplay {
@@ -303,6 +365,8 @@ export interface DashboardData {
   trail: ZScorePoint[];
   /** Outcome of trying to sync today's readiness to intervals.icu. */
   adviceStatus: AdviceStatus;
+  /** Outcome of the automatic catch-up for a few recent past days. */
+  backfillStatus: BackfillStatus;
   /** How much history actually backs today's z-scores. Display-only. */
   confidence: ReadinessConfidence;
 }
@@ -424,13 +488,24 @@ function renderAdviceBanner(status: AdviceStatus): string {
   }
 }
 
+/**
+ * Silent on success, same as the automatic catch-up itself (see `BackfillStatus`) -
+ * only a persistent failure is worth a banner, since it would otherwise fail
+ * the same way on every load with nothing on screen to explain why.
+ */
+function renderBackfillBanner(status: BackfillStatus): string {
+  if (status.kind === 'ok') return '';
+  const day = status.count === 1 ? 'day' : 'days';
+  return `<p class="banner banner-warning">Could not update ${status.count} previous ${day} on intervals.icu.</p>`;
+}
+
 export function renderDashboard(
   container: HTMLElement,
   data: DashboardData,
   theme: ThemePreference,
   handlers: DashboardHandlers,
 ): void {
-  const { settings, rows, result, todayScores, trail, adviceStatus, confidence } = data;
+  const { settings, rows, result, todayScores, trail, adviceStatus, backfillStatus, confidence } = data;
   const [todayRow, yesterdayRow] = rows;
   const showRmssd = showsMetric('rmssd', settings);
   const showSdnn = showsMetric('sdnn', settings);
@@ -487,6 +562,7 @@ export function renderDashboard(
         </dialog>
 
         ${renderAdviceBanner(adviceStatus)}
+        ${renderBackfillBanner(backfillStatus)}
 
         <section class="stats-card">
           <table class="stats-table">
