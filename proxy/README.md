@@ -8,19 +8,22 @@ and forwards the response back. None of them store or read your API key;
 they just relay it.
 
 Pick whichever fits where you're already hosting the app, or whichever free
-tier you'd rather use:
+tier you'd rather use. Once deployed, put the matching URL below into the
+app's **Proxy URL** setting — that's the only wiring needed; nothing else in
+the app changes based on which proxy you pick.
 
-| Folder | Language | Where it runs | Requires |
+| Folder | Language | Where it runs | Proxy URL setting |
 |---|---|---|---|
-| [`php/`](php) | PHP | Any PHP host (shared hosting, etc.) | PHP with the `curl` extension |
-| [`vercel-node/`](vercel-node) | JavaScript | Vercel (free tier) | Nothing — no build step |
-| [`vercel-python/`](vercel-python) | Python | Vercel (free tier) | Nothing — standard library only |
-| [`netlify/`](netlify) | JavaScript | Netlify (free tier) | Nothing — no build step |
+| [`php/`](php) | PHP | Any PHP host | wherever you uploaded it, e.g. `https://yourhost.example/proxy.php`, or `./proxy.php` if it sits next to the built app |
+| [`vercel-node/`](vercel-node) | JavaScript | Vercel (free tier) | `https://<your-project>.vercel.app/api/proxy` |
+| [`vercel-python/`](vercel-python) | Python | Vercel (free tier) | `https://<your-project>.vercel.app/api/proxy` |
+| [`netlify/`](netlify) | JavaScript | Netlify (free tier) | `https://<your-site>.netlify.app/.netlify/functions/proxy` |
 
-
-Once deployed, point the app's **Proxy URL** setting at wherever you put it
-(see each folder for the exact URL shape) — that's the only wiring needed;
-nothing else in the app changes based on which proxy you pick.
+`<your-project>` / `<your-site>` is whatever Vercel or Netlify assigned when
+you deployed (shown on the project's dashboard right after deploy, e.g.
+`go-ready-mu.vercel.app`) — not something you choose up front. A custom
+domain, if you set one up, works the same way with `/api/proxy` or
+`/.netlify/functions/proxy` still appended.
 
 ## Deploying to Vercel or Netlify (dashboard, no CLI needed)
 
