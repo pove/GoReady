@@ -152,6 +152,20 @@ contradict it: a week-long slump and a strong single morning genuinely co-occur,
 so a rule that reads the week reports what it sees and leaves the reader to
 weigh it against today's score.
 
+### What this score doesn't know
+
+A collapsed note under the insights, on every visit rather than only when
+something fires: HRV and resting HR read autonomic recovery, not the
+muscular, tendon, or joint fatigue a long or hard session leaves behind,
+which often outlasts the nervous system's own recovery. An attempt to detect
+that from data the API already exposes — elevation loss, pace variability,
+decoupling — was tested against real activity history before writing any
+code, and didn't hold up: on the exact hard session it was meant to catch,
+those metrics came in *below* baseline, confounded by heat and workout type
+far more than by accumulated fatigue. Rather than ship a rule that misses the
+case it exists for, this just says the honest thing plainly instead: weigh
+how your legs and joints actually feel alongside the score, not instead of it.
+
 ## Local development
 
 ```bash

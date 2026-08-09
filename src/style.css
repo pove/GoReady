@@ -195,6 +195,31 @@ main {
   border-left-color: var(--chart-in-band);
 }
 
+/* Standing reminder of the score's limits - present on every visit, not
+   data-driven like .insights, so closed by default keeps it from competing
+   with the things that actually changed today. */
+.score-limits-toggle {
+  width: 100%;
+  max-width: 36ch;
+  margin-top: 0.6rem;
+  text-align: left;
+}
+
+.score-limits-toggle summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.score-limits-toggle p {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
 .gauge {
   width: 100%;
   max-width: 260px;
