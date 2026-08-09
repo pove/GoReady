@@ -44,14 +44,16 @@ produce one of: `HIT`, `Normal`, `LIT`, `LIT!`, `Rest`, `REST!`, or a seventh
 "no data" state (shown on screen as `...?`, when today has no HRV
 measurement or the trailing window has zero variability). Each of the six
 real results maps to a `TrainingAdvice` code from 1 (worst) to 4 (best); "no
-data" isn't one of them — it clears the field instead, sending an empty
-value rather than a number. That value gets written back to intervals.icu
-when "Write today's readiness back to intervals.icu" is enabled in settings;
-the on-screen banner says "cleared" rather than "sent" on a no-data day, since
-nothing was actually sent.
-If intervals.icu already has a `TrainingAdvice` value for today (e.g. from
-an earlier refresh), GoReady leaves it alone instead of writing it again on
-every page load.
+data" isn't one of them, and nothing is written to intervals.icu on a
+no-data day at all — whatever was already stored for today (nothing, or a
+value from an earlier point in the day) is left untouched rather than
+proactively cleared, since a blank write isn't guaranteed to round-trip
+through intervals.icu as blank. This is written back to intervals.icu when
+"Write today's readiness back to intervals.icu" is enabled in settings, and
+only once a real code is available. If intervals.icu's stored value for
+today already matches what GoReady would send, it's left alone instead of
+being re-sent on every page load; if it differs — including a stale value
+left over from earlier in the day — it's overwritten with the current code.
 
 The gauge plots today's HRV/RHR z-scores as a point on a polar chart (angle =
 RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
