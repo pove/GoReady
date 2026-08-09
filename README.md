@@ -142,6 +142,15 @@ does not read as reassurance.
   a healthy-looking low resting HR is not the good news it appears to be.
 - **Context** for a poor reading: a short night, or a hard CTL ramp. Never fires
   without the data, and never on a day when nothing is wrong.
+- **This week's own measurement count.** The confidence badge answers a
+  different question — whether the 30-day baseline behind *today's* score is
+  thick enough. It says nothing about whether the last 7 days themselves have
+  enough readings for the 7-day-mean, CV, and coupling rules above to mean
+  anything; a good baseline and a week of missed syncs can coexist. Flags it
+  by name when either metric falls short (Plews & Buchheit, 2013, require a
+  minimum count of valid days before trusting a weekly average) — but stays
+  quiet when the baseline itself is already unusable, since that badge is
+  already the headline problem.
 
 Rules that need HRV use rMSSD, or SDNN when that is the metric the athlete
 actually records — so an SDNN-only setup gets insights instead of silence. The

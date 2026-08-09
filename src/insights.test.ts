@@ -388,3 +388,52 @@ describe('readinessConfidence', () => {
     expect(readinessConfidence(series()).overall).toMatchObject({ validDays: 30, tier: 'ok' });
   });
 });
+
+describe('buildInsights: recent measurement compliance', () => {
+  /** A solid 90-day history, but only `validRecentDays` of the last 7 have an HRV reading. */
+  const sparseRecentHrv = (validRecentDays: number) => {
+    const rows = series();
+    return rows.map((row, daysAgo) => (daysAgo < 7 && daysAgo >= validRecentDays ? { ...row, rmssd: NaN } : row));
+  };
+
+  it('fires when this week has too few HRV readings, even with a solid baseline', () => {
+    const rows = sparseRecentHrv(2);
+    expect(readinessConfidence(rows).overall.tier).not.toBe('unusable'); // the baseline itself is fine
+    const insight = find(insightsFor(rows), 'recent-compliance');
+    expect(insight).toBeTruthy();
+    expect(insight!.text).toMatch(/Only 2 of the last 7 days have rMSSD data/);
+  });
+
+  it('says nothing when the week has enough readings', () => {
+    expect(idsOf(insightsFor(sparseRecentHrv(4)))).not.toContain('recent-compliance');
+  });
+
+  it('names resting HR when that is the sparse one instead', () => {
+    const rows = series().map((row, daysAgo) => (daysAgo < 7 && daysAgo >= 2 ? { ...row, rhr: NaN } : row));
+    expect(find(insightsFor(rows), 'recent-compliance')!.text).toMatch(/Only 2 of the last 7 days have resting HR data/);
+  });
+
+  it('names both metrics when both are sparse', () => {
+    const rows = series().map((row, daysAgo) => (daysAgo < 7 && daysAgo >= 2 ? { ...row, rmssd: NaN, rhr: NaN } : row));
+    expect(find(insightsFor(rows), 'recent-compliance')!.text).toMatch(/rMSSD and resting HR data/);
+  });
+
+  // The confidence badge already says the baseline itself can't support any
+  // claim; a second "not enough data" note underneath it would be the wall of
+  // hedged text this module exists to avoid.
+  it('stays quiet when the baseline itself is already unusable', () => {
+    const twoDays = wellnessSeries(2, (daysAgo) => ({
+      rmssd: daysAgo === 0 ? 95 : 40,
+      rhr: daysAgo === 0 ? 44 : 52,
+    }));
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: 1,
+      rhrZ: -1,
+      rows: twoDays,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(twoDays),
+    });
+    expect(idsOf(insights)).not.toContain('recent-compliance');
+  });
+});
