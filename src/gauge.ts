@@ -37,12 +37,12 @@ const SCALE = 11;
  * TODAY_RING_OUTER_RADIUS around it, so the real lower bound is
  * 180 + TODAY_RING_OUTER_RADIUS + half its stroke width; round up from there.
  */
-const VIEWBOX_HEIGHT = 189;
+const VIEWBOX_HEIGHT = 187;
 
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
-/** Bigger than the trail's own max dot radius (4), so today's marker still reads as the most prominent thing on the chart. */
-const TODAY_RING_OUTER_RADIUS = 7;
+/** Just past the trail's own max dot radius (4), so today's marker stays the most prominent point without ballooning into a much bigger shape. */
+const TODAY_RING_OUTER_RADIUS = 5;
 /** Smaller ring nested inside the outer one, in a lighter shade, so the two together read as a distinct two-tone target rather than a single ring easily confused with a trail dot. */
 const TODAY_RING_INNER_RADIUS = 4;
 

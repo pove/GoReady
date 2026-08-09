@@ -262,14 +262,14 @@ main {
    underneath are always pastel, in both themes. */
 .gauge-today-ring-outer {
   fill: none;
-  stroke: #1e3a8a;
-  stroke-width: 2;
+  stroke: #2563eb;
+  stroke-width: 1.5;
 }
 
 .gauge-today-ring-inner {
   fill: none;
   stroke: #7dd3fc;
-  stroke-width: 1.5;
+  stroke-width: 1;
 }
 
 .gauge-center-badge {
