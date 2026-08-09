@@ -1,4 +1,4 @@
-import { computeTrend, isInBand, type TrendDay } from './baseline';
+import { isInBand, type TrendDay } from './baseline';
 import type { Settings, TrendValueLabels } from './types';
 
 const DISPLAY_DAYS = 30;
@@ -152,10 +152,14 @@ function describeChart(label: string, visible: TrendDay[]): string {
   );
 }
 
-/** Renders a bar chart of the last 30 days with a short-term trend line and long-term expected-range band. */
-export function renderTrendChart(label: string, valuesNewestFirst: number[], settings: Settings): string {
-  const ascending = [...valuesNewestFirst].reverse();
-  const trend = computeTrend(ascending, settings);
+/**
+ * Renders a bar chart of the last 30 days with a short-term trend line and
+ * long-term expected-range band. Takes the already-computed trend rather
+ * than raw values, so the caller can share one `computeTrend` result between
+ * this chart and the insight engine's streak rule instead of each computing
+ * it separately over the same rows/settings.
+ */
+export function renderTrendChart(label: string, trend: TrendDay[], settings: Settings): string {
   const visible = trend.slice(-DISPLAY_DAYS);
   const hatchId = `trend-hatch-${slugify(label)}`;
 

@@ -11,6 +11,7 @@ import {
   weakerConfidence,
   windowAt,
   type ReadinessConfidence,
+  type TrendDay,
 } from './baseline';
 import { computeZScoreSeries, READINESS_WINDOW_DAYS } from './score';
 import { populationStd } from './stats';
@@ -56,6 +57,17 @@ export interface InsightInput {
    * guards on that instead.
    */
   confidence: ReadinessConfidence;
+  /**
+   * Precomputed trends (ascending, oldest first), so the streak rule doesn't
+   * redo the same rolling-window work the trend charts already did for the
+   * same rows/settings. Optional - computed internally as a fallback when not
+   * supplied. `rmssdTrend`/`sdnnTrend` are both accepted since which one is
+   * "the" HRV trend depends on `pickHrvMetric`'s own data-driven choice below,
+   * not on `settings` alone.
+   */
+  rmssdTrend?: TrendDay[];
+  sdnnTrend?: TrendDay[];
+  rhrTrend?: TrendDay[];
 }
 
 /** Most insights the status card will show at once. */
@@ -478,13 +490,15 @@ function cvRule(hrv: HrvMetric): Insight | null {
  * Rule 4: consecutive days outside the expected range.
  *
  * Uses the very same band the trend-chart bars are coloured by, so the sentence
- * and the chart underneath it can never disagree.
+ * and the chart underneath it can never disagree - takes the trends directly
+ * (rather than recomputing them from rows/settings) since the trend charts
+ * already compute exactly these two, and redoing the same rolling-window work
+ * a second time here would be pure waste.
  */
-function streakRules(hrv: HrvMetric, rows: WellnessRow[], settings: Settings): Insight[] {
+function streakRules(hrv: HrvMetric, hrvTrend: TrendDay[], rhrTrend: TrendDay[]): Insight[] {
   const insights: Insight[] = [];
 
-  const check = (label: string, valuesNewestFirst: number[], concerning: 'above' | 'below') => {
-    const trend = computeTrend([...valuesNewestFirst].reverse(), settings);
+  const check = (label: string, trend: TrendDay[], concerning: 'above' | 'below') => {
     const { days, direction } = outOfBandStreak(trend);
     if (days < MIN_STREAK || direction === null) return;
 
@@ -496,8 +510,8 @@ function streakRules(hrv: HrvMetric, rows: WellnessRow[], settings: Settings): I
     });
   };
 
-  check(hrv.label, hrv.values, 'below');
-  check('Resting HR', rows.map((r) => r.rhr), 'above');
+  check(hrv.label, hrvTrend, 'below');
+  check('Resting HR', rhrTrend, 'above');
 
   return insights;
 }
@@ -656,15 +670,19 @@ function priorityOf(insight: Insight): number {
  * first. Display-only - see the note at the top of this file.
  */
 export function buildInsights(input: InsightInput): Insight[] {
-  const { code, hrvZ, rhrZ, rows, settings, confidence } = input;
+  const { code, hrvZ, rhrZ, rows, settings, confidence, rmssdTrend, sdnnTrend, rhrTrend } = input;
   const hrv = pickHrvMetric(rows, settings);
+
+  const providedHrvTrend = hrv.label === 'SDNN' ? sdnnTrend : rmssdTrend;
+  const hrvTrend = providedHrvTrend ?? computeTrend([...hrv.values].reverse(), settings);
+  const resolvedRhrTrend = rhrTrend ?? computeTrend(rows.map((r) => r.rhr).reverse(), settings);
 
   const candidates: (Insight | null)[] = [
     artifactRule(hrv),
     couplingRule(hrv, rows),
     swcRule(hrv),
     cvRule(hrv),
-    ...streakRules(hrv, rows, settings),
+    ...streakRules(hrv, hrvTrend, resolvedRhrTrend),
     recentComplianceRule(hrv, rows, confidence),
   ];
 

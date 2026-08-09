@@ -1,4 +1,4 @@
-import { unreachableBands, type ReadinessConfidence } from './baseline';
+import { computeTrend, unreachableBands, type ReadinessConfidence } from './baseline';
 import { renderGauge } from './gauge';
 import { buildInsights, type Insight } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
@@ -202,7 +202,9 @@ export function renderSettingsForm(
           </label>
           <p class="settings-hint">
             Every load also quietly corrects the last 7 days automatically, in case
-            you missed opening the app for a bit.
+            you missed opening the app for a bit.${
+              !handlers.firstRun ? ' Use the tool below to manually update older days.' : ''
+            }
           </p>
           ${
             !handlers.firstRun
@@ -522,10 +524,16 @@ export function renderDashboard(
     `<tr><th scope="row">Sleep score</th><td>${formatValue(todayRow?.sleepScore)}</td><td>${formatValue(yesterdayRow?.sleepScore)}</td></tr>`,
   ].join('');
 
+  // Computed once and shared with buildInsights below, rather than each
+  // recomputing the same rolling-window trend over the same rows/settings.
+  const rmssdTrend = computeTrend(rows.map((r) => r.rmssd).reverse(), settings);
+  const sdnnTrend = computeTrend(rows.map((r) => r.sdnn).reverse(), settings);
+  const rhrTrend = computeTrend(rows.map((r) => r.rhr).reverse(), settings);
+
   const trendCharts = [
-    showRmssd ? renderTrendChart('rMSSD', rows.map((r) => r.rmssd), settings) : '',
-    showSdnn ? renderTrendChart('SDNN', rows.map((r) => r.sdnn), settings) : '',
-    renderTrendChart('RHR', rows.map((r) => r.rhr), settings),
+    showRmssd ? renderTrendChart('rMSSD', rmssdTrend, settings) : '',
+    showSdnn ? renderTrendChart('SDNN', sdnnTrend, settings) : '',
+    renderTrendChart('RHR', rhrTrend, settings),
   ].join('');
 
   const insights = buildInsights({
@@ -535,6 +543,9 @@ export function renderDashboard(
     rows,
     settings,
     confidence,
+    rmssdTrend,
+    sdnnTrend,
+    rhrTrend,
   });
 
   container.innerHTML = `
