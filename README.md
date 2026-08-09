@@ -124,8 +124,9 @@ does not read as reassurance.
 - **The reference chart's named regions** — "optimum pre-race", "not coping
   well during loading", and "coping well during training blocks". These are
   refinements *within* the `HIT`/`Normal` zone with no `TrainingAdvice` code of
-  their own, and are this app's own approximate reading of the reference
-  chart's layout rather than part of the original algorithm. Suppressed on an
+  their own; the app estimates their z-score boundaries by reading the
+  reference chart's own axis ticks, since the original material only shows
+  this as a labeled diagram, not a published formula. Suppressed on an
   unusable baseline, being the one rule that reads today's single-day z-scores.
 - **7-day mean vs the 60-day baseline**, with a smallest-worthwhile-change band
   of half the baseline SD. Single mornings are noise; several days averaged is
