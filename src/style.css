@@ -115,6 +115,12 @@ body {
   padding: 0.25rem;
 }
 
+/* Inline SVG icons default to inline display, which leaves a few pixels of
+   baseline whitespace below them inside the button - block removes that. */
+.icon-btn svg {
+  display: block;
+}
+
 main {
   flex: 1;
   padding: 0 1.25rem 2rem;
@@ -250,15 +256,20 @@ main {
   stroke: none;
 }
 
-.gauge-today-halo {
-  fill: var(--color-surface);
-  stroke: var(--gauge-ink);
+/* Today's marker: two unfilled, concentric rings - see the comment on
+   renderToday in gauge.ts for why this replaced two earlier designs. Fixed
+   colors rather than themed ones, same reasoning as --gauge-ink: the zones
+   underneath are always pastel, in both themes. */
+.gauge-today-ring-outer {
+  fill: none;
+  stroke: #2563eb;
   stroke-width: 1.5;
 }
 
-.gauge-today-dot {
-  stroke: var(--gauge-ink);
-  stroke-width: 1.5;
+.gauge-today-ring-inner {
+  fill: none;
+  stroke: #7dd3fc;
+  stroke-width: 1;
 }
 
 .gauge-center-badge {

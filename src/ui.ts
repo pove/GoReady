@@ -38,10 +38,38 @@ function formatSleepDuration(secs: number | undefined): string {
   return `${hours}h${String(minutes).padStart(2, '0')}`;
 }
 
+/**
+ * Inline SVGs, for the same reason as SETTINGS_ICON below: the Unicode glyphs
+ * these replaced (U+25D0 "◐", U+2600 "☀", U+263E "☾") have no standard shape
+ * and render inconsistently across font stacks - not just the settings gear,
+ * this trio had the identical problem.
+ */
 const THEME_ICON: Record<ThemePreference, string> = {
-  system: '&#9680;', // ◐ follows the system preference
-  light: '&#9728;', // ☀
-  dark: '&#9790;', // ☾
+  // Half-filled circle: follows the system preference.
+  system: `
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+      <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"></path>
+    </svg>
+  `,
+  light: `
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  `,
+  dark: `
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  `,
 };
 
 /** Describes what clicking the button does next, not the current state - clearer for screen readers. */
@@ -51,13 +79,26 @@ const THEME_NEXT_LABEL: Record<ThemePreference, string> = {
   dark: 'Switch to system theme',
 };
 
+/**
+ * An inline SVG rather than the Unicode gear (U+2699, "&#9881;") this used to
+ * be: that glyph has no standard shape, and several common font stacks draw
+ * it as a sparse starburst rather than a recognizable gear. An SVG path
+ * renders identically everywhere, independent of whatever font is installed.
+ */
+const SETTINGS_ICON = `
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+`;
+
 function renderHeader(theme: ThemePreference, showSettingsButton: boolean): string {
   return `
     <header class="app-header">
       <h1>GoReady</h1>
       <div class="header-actions">
         <button id="theme-btn" class="icon-btn" type="button" aria-label="${THEME_NEXT_LABEL[theme]}" title="${THEME_NEXT_LABEL[theme]}">${THEME_ICON[theme]}</button>
-        ${showSettingsButton ? '<button id="settings-btn" class="icon-btn" type="button" aria-label="Settings">&#9881;</button>' : ''}
+        ${showSettingsButton ? `<button id="settings-btn" class="icon-btn" type="button" aria-label="Settings" title="Settings">${SETTINGS_ICON}</button>` : ''}
       </div>
     </header>
   `;
