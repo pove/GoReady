@@ -1,0 +1,11 @@
+# Deploy: create a Netlify site with this folder (proxy/netlify) as its Base
+# directory (Site settings -> Build & deploy -> Base directory), or run
+# `netlify deploy --dir=proxy/netlify` from the repo root. No build command
+# is needed - this proxy has no build step.
+
+[functions]
+  directory = "netlify/functions"
+
+# Netlify's function runtime needs global fetch, which requires Node 18+.
+[build.environment]
+  NODE_VERSION = "20"

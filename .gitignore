@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Python (proxy/vercel-python)
+__pycache__
+*.pyc
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

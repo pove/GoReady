@@ -1,0 +1,7 @@
+{
+  "name": "goready-proxy-vercel-node",
+  "private": true,
+  "version": "1.0.0",
+  "description": "GoReady's intervals.icu reverse proxy, as a Vercel Node.js serverless function.",
+  "license": "UNLICENSED"
+}

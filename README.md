@@ -18,21 +18,22 @@ thread. All credit for the underlying method goes to them.
 ## How it works
 
 ```
-Browser (SPA) ──fetch──▶ proxy.php ──fetch──▶ intervals.icu API
+Browser (SPA) ──fetch──▶ proxy ──fetch──▶ intervals.icu API
 ```
 
 Browsers can't call intervals.icu's API directly with Basic Auth from a
-different origin because of CORS. `proxy/proxy.php` is a small, stateless
-reverse proxy: it forwards whatever `Authorization` header and body the app
-sends, straight through to `https://intervals.icu/api/v1/...`, and forwards
-the response back. It never stores or reads your API key itself.
+different origin because of CORS. The [`proxy/`](proxy) folder holds four
+drop-in options (PHP, JavaScript, Python) for a small, stateless reverse
+proxy: it forwards whatever `Authorization` header and body the app sends,
+straight through to `https://intervals.icu/api/v1/...`, and forwards the
+response back. None of them store or read your API key themselves.
 
 There is no backend and no account system — it's a static single-page app.
 Your intervals.icu API key is kept in the browser's `localStorage` only
 (so it survives closing the tab — you don't have to re-enter it every
-visit) and is never sent anywhere except intervals.icu itself, via the
-small PHP proxy described below. Use "clear site data" in your browser, or
-a private/incognito window, if you don't want it kept around.
+visit) and is never sent anywhere except intervals.icu itself, via whichever
+proxy you deploy. Use "clear site data" in your browser, or a
+private/incognito window, if you don't want it kept around.
 
 ## Readiness algorithm
 
@@ -158,9 +159,10 @@ npm install
 npm run dev
 ```
 
-This serves the SPA only — API calls will fail until you either run
-`proxy.php` locally (`php -S localhost:8080 -t proxy`) and point the app's
-"Proxy URL" setting at it, or deploy the proxy somewhere reachable.
+This serves the SPA only — API calls will fail until you either run the PHP
+proxy locally (`php -S localhost:8080 -t proxy/php`) and point the app's
+"Proxy URL" setting at it, or deploy one of the proxy options below
+somewhere reachable.
 
 ## Deploying the app (static hosting / GitHub Pages)
 
@@ -172,17 +174,14 @@ builds the app and publishes `dist/` to GitHub Pages on every push to `main`.
 To enable it, go to the repo's **Settings → Pages** and set the source to
 "GitHub Actions".
 
-## Deploying the proxy (PHP hosting)
+## Deploying the proxy
 
-Copy `proxy/proxy.php` to any PHP host (requires PHP with the `curl`
-extension, which is on by default almost everywhere). No configuration is
-required, but two things are worth checking:
+Four drop-in options, in [`proxy/`](proxy) — PHP (any PHP host), JavaScript
+(Vercel or Netlify), and Python (Vercel), all doing exactly the same job. See
+[`proxy/README.md`](proxy/README.md) for a comparison table and deploy steps
+for each; the PHP one is `proxy/php/proxy.php` specifically, and has one
+extra thing worth knowing:
 
-- **CORS**: `proxy.php` defaults to `Access-Control-Allow-Origin: *`. If the
-  app and the proxy are hosted on the same domain this doesn't matter; if the
-  app is on GitHub Pages and the proxy is on your own host (different
-  origins), the wildcard is what makes that combination work. You can
-  tighten it by editing the `ALLOWED_ORIGIN` constant at the top of the file.
 - **Authorization header stripping**: some Apache + PHP-FPM setups drop the
   `Authorization` header before PHP ever sees it. If requests fail with
   "Missing Authorization header", add this to a `.htaccess` next to
@@ -196,8 +195,9 @@ required, but two things are worth checking:
 On first load (or via the gear icon), the settings screen asks for:
 
 - **Athlete ID** and **API key** — from intervals.icu: Settings → Developer.
-- **Proxy URL** — where you deployed `proxy.php`, e.g. `./proxy.php` if it
-  sits next to the app, or a full URL if it's hosted elsewhere.
+- **Proxy URL** — where you deployed one of the [proxy options](proxy), e.g.
+  `./proxy.php` if the PHP version sits next to the app, or a full URL (like
+  `https://your-project.vercel.app/api/proxy`) if it's hosted elsewhere.
 - **Write today's readiness back to intervals.icu** — mirrors the original
   script's `trainingAdviceMustBeSentToIntervals` setting.
 
