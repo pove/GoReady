@@ -149,16 +149,20 @@ const NO_DATA_RESULT: ReadinessResult = {
   adviceCode: null,
 };
 
-/** Computes today's readiness from wellness history sorted newest first. */
-export function computeReadiness(rows: WellnessRow[]): ReadinessResult {
-  if (rows.length === 0) return NO_DATA_RESULT;
+/**
+ * Computes a given day's readiness from wellness history sorted newest first
+ * (index 0 = today, the default). Also used to recompute what a past day's
+ * advice should have been, for backfilling missed days - see `backfill.ts`.
+ */
+export function computeReadiness(rows: WellnessRow[], index = 0): ReadinessResult {
+  if (rows.length === 0 || index >= rows.length) return NO_DATA_RESULT;
 
-  const { hrvZ, rhrZ } = computeZScoresAt(rows, 0);
+  const { hrvZ, rhrZ } = computeZScoresAt(rows, index);
   const { code, label, detail } = classify(hrvZ, rhrZ);
 
-  // rMSSD was measured today but there's no variability in the trailing window
+  // rMSSD was measured that day but there's no variability in the trailing window
   // (population std = 0), which makes the z-score undefined rather than truly missing.
-  const noVariability = code === 7 && !Number.isNaN(rows[0].rmssd);
+  const noVariability = code === 7 && !Number.isNaN(rows[index].rmssd);
   const finalDetail: [string, string] = noVariability
     ? ['No variability in last 30 days', 'Take more measurements']
     : detail;

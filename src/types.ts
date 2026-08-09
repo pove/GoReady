@@ -98,3 +98,13 @@ export type AdviceStatus =
   | { kind: 'already-set' }
   | { kind: 'sent' }
   | { kind: 'error'; message: string };
+
+/**
+ * Outcome of the automatic catch-up that corrects TrainingAdvice for a few
+ * recent past days on every load, in case the app wasn't opened for a while
+ * (see `planBackfill` in backfill.ts). Silent on success, same as a normal
+ * `AdviceStatus` of `sent` - the reader has nothing to decide either way -
+ * but surfaced on failure, since a persistent proxy/rate-limit problem would
+ * otherwise fail the same way on every single load with no visibility at all.
+ */
+export type BackfillStatus = { kind: 'ok' } | { kind: 'error'; count: number };
