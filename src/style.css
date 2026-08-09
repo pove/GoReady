@@ -256,18 +256,16 @@ main {
   stroke: none;
 }
 
-/* Unfilled on purpose: a solid fill would paint over whatever the trail drew
-   underneath it, erasing a trail dot whenever a previous day sat close to
-   today's position - see the comment on renderToday in gauge.ts. */
-.gauge-today-halo {
-  fill: none;
-  stroke: var(--gauge-ink);
+/* Reticle framing today's exact point - see the comment on renderToday in
+   gauge.ts for why this replaced an earlier ring+dot design. */
+.gauge-today-tick line {
   stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .gauge-today-dot {
   stroke: var(--gauge-ink);
-  stroke-width: 1.5;
+  stroke-width: 1;
 }
 
 .gauge-center-badge {

@@ -38,10 +38,38 @@ function formatSleepDuration(secs: number | undefined): string {
   return `${hours}h${String(minutes).padStart(2, '0')}`;
 }
 
+/**
+ * Inline SVGs, for the same reason as SETTINGS_ICON below: the Unicode glyphs
+ * these replaced (U+25D0 "◐", U+2600 "☀", U+263E "☾") have no standard shape
+ * and render inconsistently across font stacks - not just the settings gear,
+ * this trio had the identical problem.
+ */
 const THEME_ICON: Record<ThemePreference, string> = {
-  system: '&#9680;', // ◐ follows the system preference
-  light: '&#9728;', // ☀
-  dark: '&#9790;', // ☾
+  // Half-filled circle: follows the system preference.
+  system: `
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+      <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"></path>
+    </svg>
+  `,
+  light: `
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  `,
+  dark: `
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  `,
 };
 
 /** Describes what clicking the button does next, not the current state - clearer for screen readers. */

@@ -33,20 +33,20 @@ const SCALE = 11;
  * painted point is a wedge tip at rhrZ = +-Z_LIMIT, hrvZ = -Z_LIMIT, using
  * the same `y = CENTER_Y - radius * cos(theta)` formula as zScoreToPoint:
  *   CENTER_Y - (RADIUS_OFFSET + Z_LIMIT) * SCALE * cos(135deg) = 180.
- * Today's marker can sit on that same tip and draws a halo of radius
- * TODAY_HALO_RADIUS around it, so the real lower bound is
- * 180 + TODAY_HALO_RADIUS + half its stroke width; round up from there.
+ * Today's marker can sit on that same tip and its ticks reach
+ * TODAY_TICK_OUTER_RADIUS beyond it, so the real lower bound is
+ * 180 + TODAY_TICK_OUTER_RADIUS + half its stroke width; round up from there.
  */
 const VIEWBOX_HEIGHT = 189;
 
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
-const TODAY_HALO_RADIUS = 7;
-/**
- * Bigger than the trail's own max radius (4), so today's marker still reads
- * as the largest single point on the chart even without the halo's help.
- */
-const TODAY_DOT_RADIUS = 5;
+/** Gap between today's exact point and where each crosshair tick starts, so the ticks frame the point instead of converging on top of it. */
+const TODAY_TICK_INNER_RADIUS = 3;
+/** How far each tick reaches from the center point. Bigger than the trail's own max dot radius (4), so today's marker still reads as the most prominent thing on the chart. */
+const TODAY_TICK_OUTER_RADIUS = 8;
+/** Small on purpose: it identifies today's exact coordinate and carries the zone color, while the ticks - not this dot - are what makes the marker read as distinct from a trail dot. */
+const TODAY_DOT_RADIUS = 1.5;
 
 function clampZ(z: number): number {
   return Math.max(-Z_LIMIT, Math.min(Z_LIMIT, z));
@@ -195,19 +195,27 @@ function renderCenterBadge(result: ReadinessResult): string {
 
 /**
  * Renders today's marker at its true HRV/RHR position, or nothing if today has
- * no HRV data (code 7). The halo is an unfilled ring, not a solid disc: a
- * filled one used to paint over whatever the trail drew underneath it,
- * quietly erasing a trail dot whenever the previous day sat close to today's
- * position (the common case, since day-to-day movement is usually small) -
- * exactly the days a reader most needs to see both points. A ring the trail
- * can still show through keeps the highlight without deleting real data.
+ * no HRV data (code 7). A reticle - four short ticks framing the point, with
+ * a gap at the center - rather than a solid ring: an earlier ring+dot design
+ * still read as "just another circle" competing with the trail's own dots,
+ * and a filled ring painted over whatever the trail drew underneath it,
+ * quietly erasing a trail dot whenever a previous day sat close to today's
+ * position. Ticks are a different shape entirely, are mostly empty space, and
+ * never cover the exact point where a trail dot could be sitting.
  */
 function renderToday(today: ZScorePoint, color: string): string {
   if (Number.isNaN(today.hrvZ) || Number.isNaN(today.rhrZ)) return '';
 
   const { x, y } = zScoreToPoint(today.rhrZ, today.hrvZ);
+  const inner = TODAY_TICK_INNER_RADIUS;
+  const outer = TODAY_TICK_OUTER_RADIUS;
   return `
-    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${TODAY_HALO_RADIUS}" class="gauge-today-halo" />
+    <g class="gauge-today-tick" stroke="${color}">
+      <line x1="${x.toFixed(2)}" y1="${(y - outer).toFixed(2)}" x2="${x.toFixed(2)}" y2="${(y - inner).toFixed(2)}" />
+      <line x1="${x.toFixed(2)}" y1="${(y + inner).toFixed(2)}" x2="${x.toFixed(2)}" y2="${(y + outer).toFixed(2)}" />
+      <line x1="${(x - outer).toFixed(2)}" y1="${y.toFixed(2)}" x2="${(x - inner).toFixed(2)}" y2="${y.toFixed(2)}" />
+      <line x1="${(x + inner).toFixed(2)}" y1="${y.toFixed(2)}" x2="${(x + outer).toFixed(2)}" y2="${y.toFixed(2)}" />
+    </g>
     <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${TODAY_DOT_RADIUS}" fill="${color}" class="gauge-today-dot" />
   `;
 }
