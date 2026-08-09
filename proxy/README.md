@@ -17,8 +17,6 @@ tier you'd rather use:
 | [`vercel-python/`](vercel-python) | Python | Vercel (free tier) | Nothing — standard library only |
 | [`netlify/`](netlify) | JavaScript | Netlify (free tier) | Nothing — no build step |
 
-There's no Netlify + Python option: Netlify Functions run on Node.js (or Go,
-via a separate build step), not Python, so that combination doesn't exist.
 
 Once deployed, point the app's **Proxy URL** setting at wherever you put it
 (see each folder for the exact URL shape) — that's the only wiring needed;
