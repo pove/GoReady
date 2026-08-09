@@ -3,7 +3,7 @@ import { decideAdviceAction } from './advice';
 import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
 import { planBackfill } from './backfill';
 import { readinessConfidence } from './insights';
-import { computeReadiness, computeZScoreSeries } from './score';
+import { computeReadiness, computeZScoreSeries, READINESS_WINDOW_DAYS } from './score';
 import { isConfigured, loadSettings, saveSettings } from './settings';
 import { requiredHistoryDays } from './trendChart';
 import { applyTheme, cycleTheme, loadTheme } from './theme';
@@ -88,7 +88,15 @@ function openSettings(firstRun: boolean): void {
     onBackfillNow: firstRun
       ? undefined
       : async (days) => {
-          const rows = await fetchWellness(settings, formatDate(daysAgo(days)), formatDate(new Date()));
+          // Every one of the `days` days being backfilled needs its OWN full
+          // 30-day trailing window to compute a real z-score (planBackfill
+          // calls computeReadiness per day, same as everywhere else) - fetch
+          // that much extra buffer, or the days nearest the edge of the
+          // requested range get a near-empty window that defaults to
+          // "Normal" regardless of the true reading, which could overwrite
+          // an already-correct stored value with a wrong one.
+          const oldest = daysAgo(days + READINESS_WINDOW_DAYS);
+          const rows = await fetchWellness(settings, formatDate(oldest), formatDate(new Date()));
           return runBackfill(rows, days);
         },
   });

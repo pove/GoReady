@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS } from './settings';
 import { classify } from './score';
 import { wellnessSeries } from './testFixtures';
 import type { ReadinessCode, Settings, WellnessRow } from './types';
+import type { TrendDay } from './baseline';
 
 // Thresholds pixel-measured from the reference chart image (see insights.ts's
 // comment above trainingPhaseNote for the methodology and the independent
@@ -195,6 +196,30 @@ describe('buildInsights: streaks outside the expected range', () => {
   it('treats a run in the reassuring direction as a note, not a caution', () => {
     const insight = find(insightsFor(series({ recentRhr: 40 })), 'streak-resting-hr-below');
     expect(insight?.tone).toBe('note');
+  });
+
+  // buildInsights accepts precomputed trends (rmssdTrend/sdnnTrend/rhrTrend)
+  // so it doesn't redo the same rolling-window work the trend charts already
+  // did. A rows fixture with no real streak, paired with a hand-built trend
+  // that DOES show one, proves the passed-in trend is what's actually used -
+  // not silently ignored in favor of recomputing from rows.
+  it('uses a supplied rhrTrend instead of recomputing one from rows', () => {
+    const inBand: TrendDay = { value: 50, shortTermAvg: 50, lowerBand: 40, upperBand: 60 };
+    const aboveBand: TrendDay = { value: 70, shortTermAvg: 65, lowerBand: 40, upperBand: 60 };
+    const craftedRhrTrend: TrendDay[] = [inBand, inBand, aboveBand, aboveBand, aboveBand];
+
+    const rows = series(); // an ordinary week - would not produce this streak on its own
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: 0,
+      rhrZ: 0,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+      rhrTrend: craftedRhrTrend,
+    });
+
+    expect(find(insights, 'streak-resting-hr-above')).toBeDefined();
   });
 });
 
