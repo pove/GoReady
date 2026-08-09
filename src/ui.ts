@@ -354,14 +354,14 @@ function renderInsights(insights: Insight[]): string {
 function renderScoreLimitsNote(): string {
   return `
     <details class="score-limits-toggle">
-      <summary>What this score doesn't know</summary>
+      <summary>What this score measures</summary>
       <p>
-        This reads your resting heart rate and HRV - your nervous system's
-        recovery. It has no way to see muscle, tendon, or joint fatigue from
-        yesterday's training itself, and that often outlasts the nervous
-        system's own recovery, especially after a long or hard session.
-        After a big effort, weigh how your legs and joints actually feel
-        alongside this score, not instead of it.
+        This score reflects autonomic recovery - how well your nervous
+        system has bounced back, based on resting heart rate and HRV.
+        Muscle, tendon, and joint recovery from previous training follow
+        their own, often slower timeline. For the fullest picture, weigh
+        this score alongside how your legs and joints actually feel,
+        especially after a long or hard session.
       </p>
     </details>
   `;
