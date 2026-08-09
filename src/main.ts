@@ -77,7 +77,9 @@ async function loadDashboard(): Promise<void> {
       } else {
         try {
           await putTrainingAdvice(settings, today, result.adviceCode);
-          adviceStatus = { kind: 'sent' };
+          // No data yet blanks the field rather than sending a real code (see
+          // `AdviceStatus`) - "sent" would misreport that as advice going out.
+          adviceStatus = result.adviceCode === null ? { kind: 'cleared' } : { kind: 'sent' };
         } catch (error) {
           adviceStatus = { kind: 'error', message: describeError(error) };
         }

@@ -341,6 +341,8 @@ function renderAdviceBanner(status: AdviceStatus): string {
   switch (status.kind) {
     case 'sent':
       return '<p class="banner banner-ok">Training advice sent to intervals.icu.</p>';
+    case 'cleared':
+      return '<p class="banner banner-info">No data yet - today\'s training advice was cleared, not set.</p>';
     case 'already-set':
       return '<p class="banner banner-info">Training advice already set for today.</p>';
     case 'error':

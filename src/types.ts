@@ -81,9 +81,16 @@ export interface ReadinessResult {
   adviceCode: number | null;
 }
 
-/** Outcome of trying to sync today's readiness to intervals.icu's "TrainingAdvice" field. */
+/**
+ * Outcome of trying to sync today's readiness to intervals.icu's "TrainingAdvice"
+ * field. `cleared` is distinct from `sent`: on a "no data yet" day there is no
+ * advice code to send, so the field is blanked instead (see `computeReadiness`'s
+ * `adviceCode: null` for code 7) - a banner claiming advice was "sent" would be
+ * announcing something that didn't happen.
+ */
 export type AdviceStatus =
   | { kind: 'disabled' }
   | { kind: 'already-set' }
   | { kind: 'sent' }
+  | { kind: 'cleared' }
   | { kind: 'error'; message: string };
