@@ -1,21 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { buildInsights, readinessConfidence, trainingPhaseNote, type Insight } from './insights';
+import { buildInsights, copingWellPersists, readinessConfidence, trainingPhaseNote, type Insight } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
+import { classify } from './score';
 import { wellnessSeries } from './testFixtures';
 import type { ReadinessCode, Settings, WellnessRow } from './types';
 
+// Thresholds pixel-measured from the reference chart image (see insights.ts's
+// comment above trainingPhaseNote for the methodology and the independent
+// Python port that confirms these three regions were never a formula).
 describe('trainingPhaseNote', () => {
-  it('flags "optimum pre-race" when RHR is mildly up and HRV is still strong', () => {
-    expect(trainingPhaseNote(4, 0.8, 0.7)).toMatch(/optimum pre-race/);
-    expect(trainingPhaseNote(1, 1.2, 0.6)).toMatch(/optimum pre-race/);
+  it('flags "optimum pre-race" when RHR is mildly up and HRV sits just above the LimitIntensity floor', () => {
+    expect(trainingPhaseNote(4, -0.5, 0.7)).toMatch(/optimum pre-race/);
+    expect(trainingPhaseNote(1, -0.2, 0.6)).toMatch(/optimum pre-race/);
   });
 
-  it('flags "not coping well" when RHR is mildly up but HRV has slipped', () => {
-    expect(trainingPhaseNote(4, 0.2, 0.7)).toMatch(/may not be coping well/);
+  it('flags "not coping well" when RHR is mildly up but HRV has slipped below that floor', () => {
+    expect(trainingPhaseNote(4, -1.5, 0.7)).toMatch(/may not be coping well/);
   });
 
-  it('flags "coping well during training blocks" when RHR is calm and HRV is strong', () => {
+  it('flags "coping well during training blocks" when RHR is calm and HRV is at or above baseline', () => {
     expect(trainingPhaseNote(4, 0.8, -0.7)).toMatch(/coping well/);
+  });
+
+  // The chart's own wedge for this region is visibly narrower than the
+  // pre-race/not-coping one on the right - not symmetric.
+  it('respects the narrower, non-symmetric angular band for "coping well"', () => {
+    expect(trainingPhaseNote(4, 0.8, -0.6)).toMatch(/coping well/); // inside the band
+    expect(trainingPhaseNote(4, 0.8, -0.8)).toBeNull(); // outside it - the chart's own wedge doesn't reach this far
+  });
+
+  // Unlike the old always-covered band, the chart genuinely leaves this area
+  // unlabeled: hrvZ far enough from the shared -1 boundary in either
+  // direction falls outside both hatched regions.
+  it('gives no note within the activation band when HRV sits outside both hatched regions', () => {
+    expect(trainingPhaseNote(4, 1.5, 0.5)).toBeNull(); // well within Normal, above the pre-race ceiling
+    expect(trainingPhaseNote(4, -2.5, 0.5)).toBeNull(); // well within LimitIntensity, below the not-coping floor
+  });
+
+  // NORMAL_LIMIT_HRV_BOUNDARY (insights.ts) is a deliberate duplicate of
+  // classify()'s own Normal/LimitIntensity threshold, not an import -
+  // classify() is a 1:1 MATLAB port not meant to be restructured. This proves
+  // the two numbers can't silently drift apart even though they live in
+  // separate files.
+  it("anchors the pre-race/not-coping split to classify()'s real Normal/LimitIntensity boundary", () => {
+    expect(classify(-1, 0).code).toBe(4); // Normal, right at the boundary
+    expect(classify(-1.01, 0).code).not.toBe(4); // just past it, no longer Normal
   });
 
   it('gives no note when RHR is exactly at baseline (neither activated nor calm)', () => {
@@ -25,17 +54,17 @@ describe('trainingPhaseNote', () => {
   // Regression: a barely-positive rhrZ (statistical noise, not a real
   // deviation) used to still trigger "Resting HR is up" - a claim that
   // contradicted the gauge, which shows a point sitting right on the
-  // baseline. Any |rhrZ| at or below MIN_ACTIVATION must give no note,
-  // regardless of how low hrvZ is.
-  it('gives no note when RHR is only trivially off baseline, even with weak HRV', () => {
-    expect(trainingPhaseNote(4, 0.1, 0.05)).toBeNull();
-    expect(trainingPhaseNote(4, 0.1, -0.05)).toBeNull();
-    expect(trainingPhaseNote(4, 0.1, 0.5)).toBeNull(); // exactly at the floor, not past it
-    expect(trainingPhaseNote(4, 2, -0.5)).toBeNull();
+  // baseline. Any |rhrZ| at or below ACTIVATION_NOISE_FLOOR must give no
+  // note, regardless of what HRV would otherwise qualify.
+  it('gives no note when RHR is only trivially off baseline, even with an otherwise-qualifying HRV', () => {
+    expect(trainingPhaseNote(4, -0.5, 0.05)).toBeNull();
+    expect(trainingPhaseNote(4, -0.5, -0.05)).toBeNull();
+    expect(trainingPhaseNote(4, -0.5, 0.2)).toBeNull(); // exactly at the floor, not past it
+    expect(trainingPhaseNote(4, 2, -0.2)).toBeNull(); // exactly at the floor, other side
   });
 
   it('gives no note when RHR is calm but HRV has not recovered', () => {
-    expect(trainingPhaseNote(4, 0.1, -0.7)).toBeNull();
+    expect(trainingPhaseNote(4, -0.3, -0.7)).toBeNull();
   });
 
   it('gives no note once RHR is past the hatched band, even if still classified Normal', () => {
@@ -359,11 +388,14 @@ describe('buildInsights: the phase note against a thin baseline', () => {
   });
 
   it('still makes the note on a baseline that can support it', () => {
+    // "Not coping well" specifically, since it's the one branch with no
+    // additional taper/persistence gate - isolates this test to the
+    // confidence gate it's meant to check.
     const rows = series();
     const insights = buildInsights({
       code: 4,
-      hrvZ: 1,
-      rhrZ: -1,
+      hrvZ: -1.5,
+      rhrZ: 0.7,
       rows,
       settings: DEFAULT_SETTINGS,
       confidence: readinessConfidence(rows),
@@ -435,5 +467,92 @@ describe('buildInsights: recent measurement compliance', () => {
       confidence: readinessConfidence(twoDays),
     });
     expect(idsOf(insights)).not.toContain('recent-compliance');
+  });
+});
+
+describe('copingWellPersists', () => {
+  it('is false on an empty or too-short trail', () => {
+    expect(copingWellPersists([])).toBe(false);
+    expect(copingWellPersists([{ hrvZ: 0.5, rhrZ: -0.5 }])).toBe(false);
+  });
+
+  it('is true only when every day in the trail matches the coping-well pattern', () => {
+    const allMatch = [
+      { hrvZ: 0.5, rhrZ: -0.5 },
+      { hrvZ: 0.3, rhrZ: -0.4 },
+      { hrvZ: 0.6, rhrZ: -0.6 },
+    ];
+    expect(copingWellPersists(allMatch)).toBe(true);
+  });
+
+  it('is false when only some of the recent days match - a single lucky morning is not a pattern', () => {
+    const oneDayOnly = [
+      { hrvZ: 0.5, rhrZ: -0.5 }, // matches
+      { hrvZ: 2, rhrZ: 2 }, // does not
+      { hrvZ: 0.4, rhrZ: -0.4 }, // matches
+    ];
+    expect(copingWellPersists(oneDayOnly)).toBe(false);
+  });
+});
+
+describe("buildInsights: grounding the reference-chart phase note in more than its shape", () => {
+  // "Optimum pre-race" is geometrically a chart match here (rhrZ in (0,1],
+  // hrvZ in [-1,0)), but the literature behind it is about an actual taper,
+  // not any morning with these two numbers - see the comment on
+  // PRE_RACE_TAPER_RAMP_CEILING.
+  it('withholds "optimum pre-race" without evidence load is actually tapering', () => {
+    const rows = series(); // rampRate defaults to NaN - no load data at all
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: -0.5,
+      rhrZ: 0.7,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(idsOf(insights)).not.toContain('phase-note');
+  });
+
+  it('withholds "optimum pre-race" when load is still climbing, not tapering', () => {
+    const rows = series({ extras: { rampRate: 4 } });
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: -0.5,
+      rhrZ: 0.7,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(idsOf(insights)).not.toContain('phase-note');
+  });
+
+  it('makes the "optimum pre-race" note once load is actually coming down', () => {
+    const rows = series({ extras: { rampRate: -2 } });
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: -0.5,
+      rhrZ: 0.7,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(find(insights, 'phase-note')!.text).toMatch(/optimum pre-race/);
+  });
+
+  // "Coping well" is geometrically a chart match here too, but Plews' case
+  // studies behind it are about season-long stability - a plain, unremarkable
+  // week (the default `series()` fixture) shouldn't retroactively count as
+  // "coping well" just because today's two numbers happen to match.
+  it('withholds "coping well" when the pattern is only true of today, not the recent trail', () => {
+    const rows = series(); // an ordinary week, not a sustained calm-RHR/strong-HRV run
+    const insights = buildInsights({
+      code: 4,
+      hrvZ: 0.8,
+      rhrZ: -0.6,
+      rows,
+      settings: DEFAULT_SETTINGS,
+      confidence: readinessConfidence(rows),
+    });
+    expect(idsOf(insights)).not.toContain('phase-note');
   });
 });

@@ -110,48 +110,31 @@ does not read as reassurance.
 
 ### What the rules look at
 
-- **Readings that look like a bad capture.** A single artifact does double
-  damage: it mis-scores today, and then sits in the trailing baseline for 30
-  days inflating the standard deviation, quietly compressing every later
-  z-score toward zero. Detected with the Iglewicz-Hoaglin modified z-score
-  (median and MAD, so the outlier cannot inflate the spread it is judged
-  against), plus a floor of 25% from the recent median so a very steady athlete
-  doesn't get a merely-low morning called an artifact, and a check that the
-  rest of the week is normal — a sustained shift is a real shift, not a bad
-  capture. Ranked first when it fires, because it makes everything else on
-  screen suspect. The day is still *shown*, and still counts toward the
-  baseline; excluding it would change the readiness code.
-- **The reference chart's named regions** — "optimum pre-race", "not coping
-  well during loading", and "coping well during training blocks". These are
-  refinements *within* the `HIT`/`Normal` zone with no `TrainingAdvice` code of
-  their own; the app estimates their z-score boundaries by reading the
-  reference chart's own axis ticks, since the original material only shows
-  this as a labeled diagram, not a published formula. Suppressed on an
-  unusable baseline, being the one rule that reads today's single-day z-scores.
-- **7-day mean vs the 60-day baseline**, with a smallest-worthwhile-change band
-  of half the baseline SD. Single mornings are noise; several days averaged is
-  what tracks performance (Plews & Buchheit, 2013).
-- **Coefficient of variation** of the last week's ln-HRV against the athlete's
-  own typical week. A widening CV often moves before the average does; a CV
-  that *collapses* while the mean sits below baseline is the pattern Plews'
-  case studies associate with non-functional overreaching.
-- **Streaks** outside the expected range, computed from the very same band the
-  trend-chart bars are colored by, so the sentence and the chart cannot disagree.
-- **HRV and resting HR read together.** HRV would normally rise as resting HR
-  falls, so both sitting below baseline for a week is flagged — and when load
-  data says a block is ramping hard, named as parasympathetic saturation, where
-  a healthy-looking low resting HR is not the good news it appears to be.
-- **Context** for a poor reading: a short night, or a hard CTL ramp. Never fires
-  without the data, and never on a day when nothing is wrong.
-- **This week's own measurement count.** The confidence badge answers a
-  different question — whether the 30-day baseline behind *today's* score is
-  thick enough. It says nothing about whether the last 7 days themselves have
-  enough readings for the 7-day-mean, CV, and coupling rules above to mean
-  anything; a good baseline and a week of missed syncs can coexist. Flags it
-  by name when either metric falls short (Plews & Buchheit, 2013, require a
-  minimum count of valid days before trusting a weekly average) — but stays
-  quiet when the baseline itself is already unusable, since that badge is
-  already the headline problem.
+- **Bad-capture check.** Flags a reading that looks like a mis-measurement
+  rather than a real change, using the median and MAD so the bad reading can't
+  mask its own detection. Informational only — the day still counts toward
+  the baseline and the score.
+- **Reference-chart regions.** Refines `HIT`/`Normal` into "optimum pre-race,"
+  "not coping well during loading," and "coping well during training blocks,"
+  matched to the reference chart's own zone boundaries. "Optimum pre-race"
+  requires evidence that training load is actually coming down; "coping well"
+  requires the pattern to have held for 3 days running. Hidden when the
+  30-day baseline is too thin to trust a single day's z-scores.
+- **Weekly average vs. 60-day baseline.** Flags a 7-day HRV average that has
+  moved by more than half a baseline standard deviation, separating a real
+  trend from one noisy morning.
+- **Weekly variability.** Flags a week that's swinging more than usual, or one
+  that's unusually flat while HRV sits below baseline.
+- **Streaks.** Flags consecutive days outside the expected range, using the
+  same band the trend charts are colored by.
+- **HRV and resting HR together.** Flags both metrics sitting below baseline
+  at once — a pattern that can mean incomplete recovery even when resting HR
+  alone looks fine.
+- **Context for a poor reading.** Notes a likely explanation — short sleep or
+  a hard training ramp — only when the data supports it.
+- **Recent measurement count.** Flags when the last 7 days don't have enough
+  readings to trust a weekly trend, separately from the 30-day baseline
+  confidence badge above.
 
 Rules that need HRV use rMSSD, or SDNN when that is the metric the athlete
 actually records — so an SDNN-only setup gets insights instead of silence. The
@@ -164,18 +147,10 @@ weigh it against today's score.
 
 ### What this score measures
 
-A collapsed note under the insights, on every visit rather than only when
-something fires: HRV and resting HR read autonomic recovery — not the
-muscular, tendon, or joint recovery that follows previous training on its
-own, often slower, timeline. An attempt to detect that from data the API
-already exposes — elevation loss, pace variability, decoupling — was tested
-against real activity history before writing any code, and didn't hold up:
-on the exact hard session it was meant to catch, those metrics came in
-*below* baseline, confounded by heat and workout type far more than by
-accumulated fatigue. Rather than ship a rule that misses the case it exists
-for, this just says the constructive thing plainly instead: weigh the score
-alongside how your legs and joints actually feel, especially after a long or
-hard session.
+A collapsed note shown on every visit: HRV and resting HR reflect autonomic
+recovery, not the separate muscular, tendon, or joint recovery that follows
+training on its own timeline. Weigh the score alongside how your legs and
+joints actually feel, especially after a long or hard session.
 
 ## Local development
 

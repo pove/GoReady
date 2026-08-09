@@ -12,9 +12,9 @@ import {
   windowAt,
   type ReadinessConfidence,
 } from './baseline';
-import { READINESS_WINDOW_DAYS } from './score';
+import { computeZScoreSeries, READINESS_WINDOW_DAYS } from './score';
 import { populationStd } from './stats';
-import type { ReadinessCode, Settings, WellnessRow } from './types';
+import type { ReadinessCode, Settings, WellnessRow, ZScorePoint } from './types';
 
 /**
  * Supplementary reads on today's wellness data, shown under the readiness
@@ -111,44 +111,137 @@ const MIN_ARTIFACT_PERCENT = 25;
 // ---------------------------------------------------------------------------
 
 /**
- * Minimum |rhrZ| before "resting HR is up/calm" is a claim worth making at
- * all. A z-score of, say, 0.05 is noise around the 30-day baseline, not a
- * real deviation - without this floor, a day that's essentially sitting on
- * the baseline (visually right near the gauge's center) could still get
- * told its RHR is "up", which contradicts what the gauge itself shows.
+ * Below this, rhrZ is noise around the 30-day baseline, not a real deviation -
+ * a statistical margin GoReady adds itself, not read from the chart. Without
+ * it, a day essentially sitting on the baseline (visually right at the
+ * gauge's center) could still get told its RHR is "up", contradicting what
+ * the gauge itself shows.
  */
-const MIN_ACTIVATION = 0.5;
-/** Roughly matches the hatched regions' angular (RHR z-score) extent in the reference chart. */
-const ACTIVATION_BAND = 1.3;
-/** hrvZ threshold separating "HRV still holding up" from "HRV starting to slip". */
-const STRONG_HRV = 0.5;
+const ACTIVATION_NOISE_FLOOR = 0.2;
+
+/**
+ * The rest of these six constants come from pixel-measuring the actual
+ * reference chart image (public/readiness-chart-reference.jpg) rather than
+ * guessing - cropped and zoomed on the hatched regions, using the chart's own
+ * printed axis ticks and the already-known classify() zone boundaries as
+ * calibration points. Cross-checked against an independent Python port of the
+ * same chart (github.com/lennart-rth, based on the same credited forum
+ * author's work): it implements the five real zones but doesn't attempt these
+ * three named regions at all, confirming they were never a formula even in
+ * the original source - this is the ceiling of achievable precision, not a
+ * shortfall.
+ *
+ * "Chart-verified" below means aligned to a printed tick or an existing
+ * classify() threshold. "Best estimate" means the closest reading achievable
+ * from a compressed, hand-illustrated diagram with no finer gridlines at that
+ * point - rounded toward the narrower/more conservative side, so this never
+ * claims a region the chart doesn't actually show.
+ */
+
+/** Chart-verified: "optimum pre-race" and "not coping well" share this exact angular span, aligned to the chart's own "1" tick. */
+const PRE_RACE_NOT_COPING_MAX_RHR = 1;
+/**
+ * Chart-verified: the same hrvZ threshold classify() already uses for the
+ * Normal/LimitIntensity boundary (score.ts) - both hatched wedges in the
+ * source image share this exact edge. Duplicated here rather than imported,
+ * since classify() is a 1:1 MATLAB port not meant to be restructured; a
+ * regression test proves the two stay in sync.
+ */
+const NORMAL_LIMIT_HRV_BOUNDARY = -1;
+/** Best estimate: how far "optimum pre-race" extends past that shared boundary before the chart goes back to plain Normal. */
+const PRE_RACE_HRV_CEILING = 0;
+/** Best estimate: how far "not coping well" extends past that shared boundary before the chart goes back to plain LimitIntensity. */
+const NOT_COPING_HRV_FLOOR = -2;
+
+/** Chart-verified shape, deliberately NOT symmetric with the right side: this wedge is visibly narrower in the source image and doesn't reach the LimitIntensity boundary. */
+const COPING_WELL_MIN_RHR = -0.7;
+/** Best estimate: this wedge's own radial extent, well short of the LimitIntensity boundary. */
+const COPING_WELL_HRV_FLOOR = 0;
+
+/** Whether today's point sits in the chart-measured "optimum pre-race" band - see `trainingPhaseNote`. Exposed so `buildInsights` can apply the taper-context gate below without re-deriving or string-matching. */
+function isPreRaceCandidate(hrvZ: number, rhrZ: number): boolean {
+  return (
+    rhrZ > ACTIVATION_NOISE_FLOOR &&
+    rhrZ <= PRE_RACE_NOT_COPING_MAX_RHR &&
+    hrvZ >= NORMAL_LIMIT_HRV_BOUNDARY &&
+    hrvZ < PRE_RACE_HRV_CEILING
+  );
+}
+
+/** Whether today's point sits in the chart-measured "coping well" band - see `trainingPhaseNote`. Exposed so `buildInsights` can apply the persistence gate below. */
+function isCopingWellCandidate(hrvZ: number, rhrZ: number): boolean {
+  return rhrZ < -ACTIVATION_NOISE_FLOOR && rhrZ >= COPING_WELL_MIN_RHR && hrvZ >= COPING_WELL_HRV_FLOOR;
+}
 
 /**
  * Supplementary, qualitative read on *where* today's point sits within the
  * HIT/Normal zone, based on three named regions on the reference readiness
  * chart (see the forum thread credited in the README, and the in-app help
  * dialog which shows that chart): "optimum pre-race", "not coping well
- * during loading", and "coping well during training blocks".
+ * during loading", and "coping well during training blocks" - not part of
+ * Inigo Tolosa's original scoring algorithm.
  *
- * These bands are this app's own approximate reading of that diagram's
- * layout relative to its axis ticks - not part of Inigo Tolosa's original
- * scoring algorithm.
+ * A geometric match to the chart alone isn't the same as the underlying
+ * physiology being well-supported for all three - see the literature review
+ * behind `PRE_RACE_TAPER_RAMP_CEILING` and `copingWellPersists` in
+ * `buildInsights`, which ground the two weaker patterns in additional
+ * context this function deliberately doesn't have access to. This function
+ * only answers "does today's shape match the chart", nothing more.
  */
 export function trainingPhaseNote(code: ReadinessCode, hrvZ: number, rhrZ: number): string | null {
   if (code !== 1 && code !== 4) return null; // only refines HIT / Normal
   if (Number.isNaN(hrvZ) || Number.isNaN(rhrZ)) return null;
 
-  if (rhrZ > MIN_ACTIVATION && rhrZ <= ACTIVATION_BAND) {
-    return hrvZ >= STRONG_HRV
-      ? 'Resting HR is up but HRV is still strong - this pattern looks like "optimum pre-race": primed, not fatigued.'
-      : 'Resting HR is up and HRV is starting to slip - a sign you may not be coping well with recent loading.';
+  if (rhrZ > ACTIVATION_NOISE_FLOOR && rhrZ <= PRE_RACE_NOT_COPING_MAX_RHR) {
+    if (isPreRaceCandidate(hrvZ, rhrZ)) {
+      return 'Resting HR is up but HRV is still strong - this pattern looks like "optimum pre-race": primed, not fatigued.';
+    }
+    if (hrvZ < NORMAL_LIMIT_HRV_BOUNDARY && hrvZ >= NOT_COPING_HRV_FLOOR) {
+      return 'Resting HR is up and HRV is starting to slip - a sign you may not be coping well with recent loading.';
+    }
+    return null; // outside both hatched bands in the source chart - it doesn't label this area either
   }
 
-  if (rhrZ < -MIN_ACTIVATION && rhrZ >= -ACTIVATION_BAND && hrvZ >= STRONG_HRV) {
-    return 'Resting HR is calm and HRV is strong - a sign you\'re coping well with the current training block.';
+  if (isCopingWellCandidate(hrvZ, rhrZ)) {
+    return "Resting HR is calm and HRV is strong - a sign you're coping well with the current training block.";
   }
 
   return null;
+}
+
+/**
+ * "Optimum pre-race" being geometrically the chart's shape isn't the same as
+ * it being scientifically sound in isolation. There IS literature for mild
+ * sympathetic activation without vagal withdrawal reading as favorable
+ * arousal/readiness (Matsumura et al., 2021, Frontiers in Sports and Active
+ * Living, on elite snowboarders) - but the same study found the BEST
+ * competitive scores actually correlated with LOWER rMSSD as competition
+ * intensity rose, and taper reviews (Bellenger et al.) describe resting HR
+ * rising during taper mainly from plasma-volume re-normalization, not
+ * "readiness" per se. None of that supports treating any elevated-RHR
+ * morning with decent HRV as pre-race-primed - the same two numbers could
+ * just as easily be dehydration, caffeine, or a poor night's sleep with no
+ * taper involved at all. Require actual evidence load is coming down before
+ * making this specific claim.
+ */
+const PRE_RACE_TAPER_RAMP_CEILING = 0;
+
+/**
+ * "Coping well" being geometrically the chart's shape has the same gap in
+ * the other direction: Plews' supporting case studies (elite rowers and
+ * triathletes) are about HRV staying stable across a SEASON, not one
+ * morning's z-score - a single good reading proves nothing a genuinely
+ * well-adapted athlete and a lucky one wouldn't both produce. Require the
+ * same pattern to have held for MIN_STREAK days (the same bar `streakRules`
+ * already uses for "worth mentioning") before treating it as a claim about
+ * an actual pattern. Takes the trail directly (rather than `rows`) so this
+ * pure yes/no rule can be tested without needing to reverse-engineer a
+ * wellness history that lands three consecutive days inside a narrow z-score
+ * band - constructing the trail from real data is `computeZScoreSeries`'s
+ * job, already covered by its own tests.
+ */
+export function copingWellPersists(trail: ZScorePoint[]): boolean {
+  return trail.length >= MIN_STREAK && trail.every((point) => isCopingWellCandidate(point.hrvZ, point.rhrZ));
 }
 
 // ---------------------------------------------------------------------------
@@ -581,7 +674,13 @@ export function buildInsights(input: InsightInput): Insight[] {
   // degenerate - two days cap them at |z| = 1 - and "HRV is strong" would be
   // an unsupported claim sitting directly under a badge saying the baseline
   // cannot support claims.
-  const phase = confidence.overall.tier === 'unusable' ? null : trainingPhaseNote(code, hrvZ, rhrZ);
+  let phase = confidence.overall.tier === 'unusable' ? null : trainingPhaseNote(code, hrvZ, rhrZ);
+  if (phase && isPreRaceCandidate(hrvZ, rhrZ)) {
+    const rampRate = rows[0]?.rampRate ?? NaN;
+    if (Number.isNaN(rampRate) || rampRate > PRE_RACE_TAPER_RAMP_CEILING) phase = null;
+  } else if (phase && isCopingWellCandidate(hrvZ, rhrZ) && !copingWellPersists(computeZScoreSeries(rows, MIN_STREAK - 1))) {
+    phase = null;
+  }
   if (phase) candidates.push({ id: 'phase-note', tone: 'note', text: phase });
 
   const fired = candidates.filter((insight): insight is Insight => insight !== null);
