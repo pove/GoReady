@@ -42,7 +42,11 @@ const VIEWBOX_HEIGHT = 189;
 const TRAIL_OPACITY_RANGE: [number, number] = [0.15, 0.55];
 const TRAIL_RADIUS_RANGE: [number, number] = [2, 4];
 const TODAY_HALO_RADIUS = 7;
-const TODAY_DOT_RADIUS = 4.5;
+/**
+ * Bigger than the trail's own max radius (4), so today's marker still reads
+ * as the largest single point on the chart even without the halo's help.
+ */
+const TODAY_DOT_RADIUS = 5;
 
 function clampZ(z: number): number {
   return Math.max(-Z_LIMIT, Math.min(Z_LIMIT, z));
@@ -189,7 +193,15 @@ function renderCenterBadge(result: ReadinessResult): string {
   `;
 }
 
-/** Renders today's marker at its true HRV/RHR position, or nothing if today has no HRV data (code 7). */
+/**
+ * Renders today's marker at its true HRV/RHR position, or nothing if today has
+ * no HRV data (code 7). The halo is an unfilled ring, not a solid disc: a
+ * filled one used to paint over whatever the trail drew underneath it,
+ * quietly erasing a trail dot whenever the previous day sat close to today's
+ * position (the common case, since day-to-day movement is usually small) -
+ * exactly the days a reader most needs to see both points. A ring the trail
+ * can still show through keeps the highlight without deleting real data.
+ */
 function renderToday(today: ZScorePoint, color: string): string {
   if (Number.isNaN(today.hrvZ) || Number.isNaN(today.rhrZ)) return '';
 

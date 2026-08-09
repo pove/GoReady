@@ -115,6 +115,12 @@ body {
   padding: 0.25rem;
 }
 
+/* Inline SVG icons default to inline display, which leaves a few pixels of
+   baseline whitespace below them inside the button - block removes that. */
+.icon-btn svg {
+  display: block;
+}
+
 main {
   flex: 1;
   padding: 0 1.25rem 2rem;
@@ -250,10 +256,13 @@ main {
   stroke: none;
 }
 
+/* Unfilled on purpose: a solid fill would paint over whatever the trail drew
+   underneath it, erasing a trail dot whenever a previous day sat close to
+   today's position - see the comment on renderToday in gauge.ts. */
 .gauge-today-halo {
-  fill: var(--color-surface);
+  fill: none;
   stroke: var(--gauge-ink);
-  stroke-width: 1.5;
+  stroke-width: 2;
 }
 
 .gauge-today-dot {
