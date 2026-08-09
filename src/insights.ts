@@ -448,6 +448,41 @@ function couplingRule(hrv: HrvMetric, rows: WellnessRow[]): Insight | null {
 }
 
 /**
+ * Rule: not enough of the last week's readings to trust a weekly trend.
+ *
+ * The confidence badge answers a different question - whether the 30-day
+ * baseline behind *today's* z-scores is thick enough. An athlete can have
+ * plenty of history there and still have missed several recent syncs, which
+ * silently disables `swcRule`, `cvRule` and `couplingRule` (they all guard on
+ * `MIN_RECENT_DAYS` via `summarize()`) without anything on screen saying why.
+ * Plews & Buchheit (2013) flag exactly this: a weekly HRV read needs a minimum
+ * count of valid days, not just any two numbers seven days apart.
+ *
+ * Silent when the baseline itself is already unusable - that badge is already
+ * the headline problem, and piling a second warning on top of it is the wall
+ * of hedged text this module exists to avoid.
+ */
+function recentComplianceRule(hrv: HrvMetric, rows: WellnessRow[], confidence: ReadinessConfidence): Insight | null {
+  if (confidence.overall.tier === 'unusable') return null;
+
+  const gaps = [
+    { label: hrv.label, count: validCount(windowAt(hrv.ln, RECENT_WINDOW)) },
+    { label: 'resting HR', count: validCount(windowAt(rows.map((r) => r.rhr), RECENT_WINDOW)) },
+  ].filter((metric) => metric.count < MIN_RECENT_DAYS);
+
+  if (gaps.length === 0) return null;
+
+  const metrics = gaps.map((metric) => metric.label).join(' and ');
+  const worst = Math.min(...gaps.map((metric) => metric.count));
+
+  return {
+    id: 'recent-compliance',
+    tone: 'note',
+    text: `Only ${worst} of the last ${RECENT_WINDOW} days have ${metrics} data - not enough to read this week's trend yet.`,
+  };
+}
+
+/**
  * Rule 6: what else about today might explain a poor reading. Purely
  * attributional - it never fires on its own account, only when something is
  * actually off, and never without the data to back it.
@@ -513,6 +548,7 @@ const RULE_PRIORITY = [
   'streak-',
   'phase-note',
   'context-',
+  'recent-compliance',
   'swc-above',
   'swc-stable',
 ];
@@ -536,13 +572,15 @@ export function buildInsights(input: InsightInput): Insight[] {
     swcRule(hrv),
     cvRule(hrv),
     ...streakRules(hrv, rows, settings),
+    recentComplianceRule(hrv, rows, confidence),
   ];
 
   // The phase note is the only rule reading today's single-day z-scores, so it
-  // is the only one that needs the readiness confidence. On an unusable
-  // baseline those z-scores are arithmetically degenerate - two days cap them at
-  // |z| = 1 - and "HRV is strong" would be an unsupported claim sitting directly
-  // under a badge saying the baseline cannot support claims.
+  // is the only one that needs the readiness confidence for this particular
+  // reason. On an unusable baseline those z-scores are arithmetically
+  // degenerate - two days cap them at |z| = 1 - and "HRV is strong" would be
+  // an unsupported claim sitting directly under a badge saying the baseline
+  // cannot support claims.
   const phase = confidence.overall.tier === 'unusable' ? null : trainingPhaseNote(code, hrvZ, rhrZ);
   if (phase) candidates.push({ id: 'phase-note', tone: 'note', text: phase });
 
