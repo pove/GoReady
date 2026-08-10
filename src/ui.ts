@@ -334,11 +334,24 @@ export function renderSettingsForm(
   };
   syncPassphraseVisibility();
   encryptCheckbox.addEventListener('change', syncPassphraseVisibility);
+  // A non-empty setCustomValidity blocks the *next* submit event from ever firing,
+  // not just the one that set it - it has to be cleared as the user edits, or a
+  // rejected whitespace-only passphrase would permanently lock the form.
+  passphraseInput.addEventListener('input', () => passphraseInput.setCustomValidity(''));
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    const passphrase = encryptCheckbox.checked ? passphraseInput.value.trim() || undefined : undefined;
-    handlers.onSave(readSettingsForm(form), passphrase);
+    const passphrase = passphraseInput.value.trim();
+    // `required` alone lets a whitespace-only value through - without this check
+    // that would silently save the API key as plain text while the checkbox
+    // still reads "protected", with no indication anything went wrong.
+    if (encryptCheckbox.checked && !passphrase) {
+      passphraseInput.setCustomValidity('Enter a passphrase, or uncheck "Protect API key" to save without one.');
+      passphraseInput.reportValidity();
+      return;
+    }
+    passphraseInput.setCustomValidity('');
+    handlers.onSave(readSettingsForm(form), encryptCheckbox.checked ? passphrase : undefined);
   });
 
   container.querySelector<HTMLButtonElement>('#settings-cancel')?.addEventListener('click', () => handlers.onCancel?.());

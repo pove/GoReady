@@ -110,10 +110,21 @@ function openSettings(firstRun: boolean): void {
     onSave: (updated, passphrase) => {
       const changed = !settingsEqual(settings, updated);
       settings = updated;
-      void saveSettings(settings, passphrase).then(() => {
-        if (changed || !lastDashboard) void loadDashboard();
-        else renderCachedDashboard();
-      });
+      void saveSettings(settings, passphrase)
+        .then(() => {
+          if (changed || !lastDashboard) void loadDashboard();
+          else renderCachedDashboard();
+        })
+        .catch((error: unknown) => {
+          // Encrypting the API key can fail on its own (e.g. crypto.subtle is
+          // unavailable outside a secure context) - without this, the settings
+          // form would just sit there with the save silently lost.
+          showError(app!, describeError(error), theme, {
+            onRetry: () => openSettings(false),
+            onSettings: () => openSettings(false),
+            onToggleTheme: handleThemeToggle,
+          });
+        });
     },
     onCancel: firstRun
       ? undefined
