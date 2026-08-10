@@ -247,6 +247,14 @@ the browser/origin — they survive closing the tab or the browser, so you
 only enter them once. Clear them from the browser's site data settings, or
 use a private/incognito window, if you'd rather they not persist.
 
+Optionally, check **Protect API key with a passphrase** to encrypt the key
+at rest (AES-GCM, PBKDF2-derived) instead of storing it as plain text. The
+passphrase itself is never stored — you'll unlock the key once per browser
+tab session, and re-enter it whenever you save with protection on. This
+guards a stolen device or `localStorage` backup; it doesn't protect against
+an active XSS on the page itself, which could read the key from memory
+while the app is using it.
+
 ## What changed from the MATLAB version
 
 - Single athlete only — no coach/multi-athlete menu.
