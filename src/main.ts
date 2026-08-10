@@ -4,10 +4,26 @@ import { fetchWellness, GoReadyApiError, putTrainingAdvice } from './api';
 import { planBackfill } from './backfill';
 import { readinessConfidence } from './insights';
 import { computeReadiness, computeZScoreSeries, READINESS_WINDOW_DAYS } from './score';
-import { isConfigured, loadSettings, saveSettings } from './settings';
+import {
+  isApiKeyEncrypted,
+  isApiKeyLocked,
+  isConfigured,
+  loadSettings,
+  saveSettings,
+  settingsEqual,
+  unlockApiKey,
+} from './settings';
 import { requiredHistoryDays } from './trendChart';
 import { applyTheme, cycleTheme, loadTheme } from './theme';
-import { renderDashboard, renderSettingsForm, showError, showLoading, updateThemeButton } from './ui';
+import {
+  renderDashboard,
+  renderSettingsForm,
+  showError,
+  showLoading,
+  showUnlockScreen,
+  updateThemeButton,
+  type DashboardData,
+} from './ui';
 import type { AdviceStatus, BackfillStatus, WellnessRow } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -16,6 +32,9 @@ if (!app) throw new Error('#app root element not found');
 let settings = loadSettings();
 let theme = loadTheme();
 applyTheme(theme);
+
+/** The data behind the last successfully rendered dashboard, reused to redraw it without a refetch when Settings is closed with nothing changed. */
+let lastDashboard: DashboardData | null = null;
 
 /** How many previous days' needle positions to fade into the gauge as a trail. */
 const GAUGE_TRAIL_DAYS = 6;
@@ -75,15 +94,44 @@ async function runBackfill(rows: WellnessRow[], windowDays: number): Promise<{ s
   return { succeeded, failed };
 }
 
+/** Redraws the dashboard from the last successful load's data, with no refetch. */
+function renderCachedDashboard(): void {
+  renderDashboard(app!, lastDashboard!, theme, {
+    onSettings: () => openSettings(false),
+    onRefresh: () => void loadDashboard(),
+    onToggleTheme: handleThemeToggle,
+  });
+}
+
 function openSettings(firstRun: boolean): void {
   renderSettingsForm(app!, settings, theme, {
     firstRun,
-    onSave: (updated) => {
+    apiKeyEncrypted: isApiKeyEncrypted(),
+    onSave: (updated, passphrase) => {
+      const changed = !settingsEqual(settings, updated);
       settings = updated;
-      saveSettings(settings);
-      void loadDashboard();
+      void saveSettings(settings, passphrase)
+        .then(() => {
+          if (changed || !lastDashboard) void loadDashboard();
+          else renderCachedDashboard();
+        })
+        .catch((error: unknown) => {
+          // Encrypting the API key can fail on its own (e.g. crypto.subtle is
+          // unavailable outside a secure context) - without this, the settings
+          // form would just sit there with the save silently lost.
+          showError(app!, describeError(error), theme, {
+            onRetry: () => openSettings(false),
+            onSettings: () => openSettings(false),
+            onToggleTheme: handleThemeToggle,
+          });
+        });
     },
-    onCancel: firstRun ? undefined : () => void loadDashboard(),
+    onCancel: firstRun
+      ? undefined
+      : () => {
+          if (lastDashboard) renderCachedDashboard();
+          else void loadDashboard();
+        },
     onToggleTheme: handleThemeToggle,
     onBackfillNow: firstRun
       ? undefined
@@ -139,12 +187,8 @@ async function loadDashboard(): Promise<void> {
       backfillStatus = failed > 0 ? { kind: 'error', count: failed } : { kind: 'ok' };
     }
 
-    renderDashboard(
-      app!,
-      { settings, rows, result, todayScores, trail, adviceStatus, backfillStatus, confidence },
-      theme,
-      { onSettings: () => openSettings(false), onRefresh: () => void loadDashboard(), onToggleTheme: handleThemeToggle },
-    );
+    lastDashboard = { settings, rows, result, todayScores, trail, adviceStatus, backfillStatus, confidence };
+    renderCachedDashboard();
   } catch (error) {
     showError(app!, describeError(error), theme, {
       onRetry: () => void loadDashboard(),
@@ -154,8 +198,21 @@ async function loadDashboard(): Promise<void> {
   }
 }
 
-if (!isConfigured(settings)) {
-  openSettings(true);
+/** Runs once the API key (if any) is unlocked: the normal first-run/dashboard flow. */
+function startApp(): void {
+  if (!isConfigured(settings)) openSettings(true);
+  else void loadDashboard();
+}
+
+if (isApiKeyLocked()) {
+  showUnlockScreen(app, theme, {
+    onUnlock: async (passphrase) => {
+      await unlockApiKey(passphrase);
+      settings = loadSettings();
+      startApp();
+    },
+    onToggleTheme: handleThemeToggle,
+  });
 } else {
-  void loadDashboard();
+  startApp();
 }

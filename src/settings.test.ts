@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, loadSettings, saveSettings } from './settings';
+import {
+  clearSettings,
+  DEFAULT_SETTINGS,
+  isApiKeyEncrypted,
+  isApiKeyLocked,
+  loadSettings,
+  saveSettings,
+  settingsEqual,
+  unlockApiKey,
+} from './settings';
 
 /**
  * Vitest's default (non-browser) environment has no `localStorage` global.
@@ -31,8 +40,8 @@ class MemoryStorage implements Storage {
 globalThis.localStorage ??= new MemoryStorage();
 
 describe('loadSettings', () => {
-  beforeEach(() => localStorage.clear());
-  afterEach(() => localStorage.clear());
+  beforeEach(() => clearSettings());
+  afterEach(() => clearSettings());
 
   it('returns the defaults when nothing is stored', () => {
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
@@ -88,5 +97,81 @@ describe('loadSettings', () => {
   it('falls back to the defaults entirely on unparsable JSON', () => {
     localStorage.setItem('goready.settings', '{not json');
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  // Regression: `readSettingsForm` (ui.ts, the save path) already coerced these
+  // three fields to real numbers, but `loadSettings` (the load path) trusted
+  // whatever JSON.parse handed back - a hand-edited or corrupted localStorage
+  // value flowed straight into an HTML attribute unescaped.
+  describe('numeric field coercion', () => {
+    it('falls back to defaults when the trend/std-dev fields are not usable numbers', () => {
+      localStorage.setItem(
+        'goready.settings',
+        JSON.stringify({ daysForShortTermTrend: 'nope', daysForLongTermTrend: -5, stdDevMultiplier: '<img>' }),
+      );
+      const settings = loadSettings();
+      expect(settings.daysForShortTermTrend).toBe(DEFAULT_SETTINGS.daysForShortTermTrend);
+      expect(settings.daysForLongTermTrend).toBe(DEFAULT_SETTINGS.daysForLongTermTrend);
+      expect(settings.stdDevMultiplier).toBe(DEFAULT_SETTINGS.stdDevMultiplier);
+    });
+
+    it('keeps a legitimately stored numeric value', () => {
+      localStorage.setItem('goready.settings', JSON.stringify({ daysForShortTermTrend: 14, stdDevMultiplier: 1.5 }));
+      const settings = loadSettings();
+      expect(settings.daysForShortTermTrend).toBe(14);
+      expect(settings.stdDevMultiplier).toBe(1.5);
+    });
+  });
+});
+
+describe('API key encryption', () => {
+  beforeEach(() => clearSettings());
+  afterEach(() => clearSettings());
+
+  it('is not locked and not encrypted when nothing is stored', () => {
+    expect(isApiKeyEncrypted()).toBe(false);
+    expect(isApiKeyLocked()).toBe(false);
+  });
+
+  it('stores the key encrypted, locked until unlocked with the right passphrase', async () => {
+    const settings = { ...DEFAULT_SETTINGS, athleteId: 'i1', apiKey: 'plaintext-key' };
+    await saveSettings(settings, 'my-passphrase');
+
+    expect(isApiKeyEncrypted()).toBe(true);
+    expect(isApiKeyLocked()).toBe(true);
+    expect(loadSettings().apiKey).toBe('');
+
+    await unlockApiKey('my-passphrase');
+    expect(isApiKeyLocked()).toBe(false);
+    expect(loadSettings().apiKey).toBe('plaintext-key');
+  });
+
+  it('never writes the plaintext key to storage once encryption is on', async () => {
+    await saveSettings({ ...DEFAULT_SETTINGS, apiKey: 'plaintext-key' }, 'my-passphrase');
+    expect(localStorage.getItem('goready.settings')).not.toContain('plaintext-key');
+  });
+
+  it('stays locked on a wrong passphrase, and does not throw from isApiKeyLocked', async () => {
+    await saveSettings({ ...DEFAULT_SETTINGS, apiKey: 'plaintext-key' }, 'right-passphrase');
+    await expect(unlockApiKey('wrong-passphrase')).rejects.toThrow('Incorrect passphrase.');
+    expect(isApiKeyLocked()).toBe(true);
+  });
+
+  it('saving without a passphrase stores the key as plain text again', async () => {
+    await saveSettings({ ...DEFAULT_SETTINGS, apiKey: 'plaintext-key' }, 'a-passphrase');
+    await saveSettings({ ...DEFAULT_SETTINGS, apiKey: 'plaintext-key' });
+    expect(isApiKeyEncrypted()).toBe(false);
+    expect(loadSettings().apiKey).toBe('plaintext-key');
+  });
+});
+
+describe('settingsEqual', () => {
+  it('is true for two structurally identical settings objects', () => {
+    expect(settingsEqual(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS })).toBe(true);
+  });
+
+  it('is false when any single field differs', () => {
+    expect(settingsEqual(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, athleteId: 'changed' })).toBe(false);
+    expect(settingsEqual(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, stdDevMultiplier: 9 })).toBe(false);
   });
 });
