@@ -1,7 +1,9 @@
 import { computeTrend, unreachableBands, type ReadinessConfidence } from './baseline';
 import { renderGauge } from './gauge';
+import { escapeHtml } from './html';
 import { buildInsights, type Insight } from './insights';
 import { DEFAULT_SETTINGS } from './settings';
+import { numberOr } from './settingsCoercion';
 import { READINESS_LEGEND, ZONE_COLORS } from './score';
 import type { ThemePreference } from './theme';
 import { renderTrendChart, renderTrendLegend } from './trendChart';
@@ -15,15 +17,6 @@ import type {
   WellnessRow,
   ZScorePoint,
 } from './types';
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 function formatValue(value: number | undefined): string {
   if (value === undefined || Number.isNaN(value)) return '--';
@@ -158,9 +151,55 @@ export function showError(container: HTMLElement, message: string, theme: ThemeP
   container.querySelector<HTMLButtonElement>('#error-settings-btn')!.addEventListener('click', handlers.onSettings);
 }
 
+interface UnlockScreenHandlers {
+  /** Rejects (with a message worth showing) on an incorrect passphrase; resolves on success. */
+  onUnlock: (passphrase: string) => Promise<void>;
+  onToggleTheme: () => void;
+}
+
+/** Shown once per browser session when the stored API key is encrypted, before anything that needs it can run. */
+export function showUnlockScreen(container: HTMLElement, theme: ThemePreference, handlers: UnlockScreenHandlers): void {
+  container.innerHTML = `
+    <div class="screen unlock-screen">
+      ${renderHeader(theme, false)}
+      <form id="unlock-form" class="settings-form">
+        <p class="settings-intro">Enter your passphrase to unlock your API key.</p>
+        <label>Passphrase
+          <input type="password" name="passphrase" id="unlock-passphrase" autocomplete="off" required autofocus />
+        </label>
+        <p class="error-message" id="unlock-error" role="alert"></p>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Unlock</button>
+        </div>
+      </form>
+    </div>
+  `;
+  attachHeaderHandlers(container, handlers.onToggleTheme);
+
+  const form = container.querySelector<HTMLFormElement>('#unlock-form')!;
+  const input = container.querySelector<HTMLInputElement>('#unlock-passphrase')!;
+  const errorEl = container.querySelector<HTMLParagraphElement>('#unlock-error')!;
+  const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    errorEl.textContent = '';
+    submitBtn.disabled = true;
+    handlers
+      .onUnlock(input.value)
+      .catch((error: unknown) => {
+        errorEl.textContent = error instanceof Error ? error.message : 'Something went wrong.';
+        submitBtn.disabled = false;
+      });
+  });
+}
+
 interface SettingsFormHandlers {
   firstRun: boolean;
-  onSave: (settings: Settings) => void;
+  /** Whether the stored API key is currently encrypted, to preset the "protect" checkbox. */
+  apiKeyEncrypted: boolean;
+  /** `passphrase` is set only when the "protect API key" checkbox is checked. */
+  onSave: (settings: Settings, passphrase?: string) => void;
   onCancel?: () => void;
   onToggleTheme: () => void;
   /** Runs the last `days` days' worth of catch-up on demand. Undefined on first run - nothing to catch up on before the account is even connected. */
@@ -189,6 +228,18 @@ export function renderSettingsForm(
           <label>API key
             <input type="password" name="apiKey" value="${escapeHtml(settings.apiKey)}" required autocomplete="off" />
           </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="encrypt-api-key" name="encryptApiKey" ${handlers.apiKeyEncrypted ? 'checked' : ''} />
+            Protect API key with a passphrase
+          </label>
+          <label id="api-key-passphrase-row">Passphrase
+            <input type="password" name="apiKeyPassphrase" id="api-key-passphrase" autocomplete="off" />
+          </label>
+          <p class="settings-hint">
+            The passphrase is never stored - only used on this device to encrypt/decrypt the
+            key. You'll be asked for it again each time you save with protection on, and once
+            per browser session to unlock the key.
+          </p>
           <label>Proxy URL
             <input type="text" name="proxyUrl" value="${escapeHtml(settings.proxyUrl)}" placeholder="./proxy.php" required />
           </label>
@@ -247,13 +298,13 @@ export function renderSettingsForm(
           <fieldset>
             <legend>Trend charts</legend>
             <label>Short-term trend window (days)
-              <input type="number" name="daysForShortTermTrend" min="1" value="${settings.daysForShortTermTrend}" />
+              <input type="number" name="daysForShortTermTrend" min="1" value="${escapeHtml(String(settings.daysForShortTermTrend))}" />
             </label>
             <label>Long-term trend window (days)
-              <input type="number" name="daysForLongTermTrend" min="1" value="${settings.daysForLongTermTrend}" />
+              <input type="number" name="daysForLongTermTrend" min="1" value="${escapeHtml(String(settings.daysForLongTermTrend))}" />
             </label>
             <label>Expected-range width (&times; std dev)
-              <input type="number" name="stdDevMultiplier" min="0" step="0.05" value="${settings.stdDevMultiplier}" />
+              <input type="number" name="stdDevMultiplier" min="0" step="0.05" value="${escapeHtml(String(settings.stdDevMultiplier))}" />
             </label>
             <label>Values above bars
               <select name="trendValueLabels">
@@ -274,9 +325,20 @@ export function renderSettingsForm(
   `;
 
   const form = container.querySelector<HTMLFormElement>('#settings-form')!;
+  const encryptCheckbox = container.querySelector<HTMLInputElement>('#encrypt-api-key')!;
+  const passphraseRow = container.querySelector<HTMLElement>('#api-key-passphrase-row')!;
+  const passphraseInput = container.querySelector<HTMLInputElement>('#api-key-passphrase')!;
+  const syncPassphraseVisibility = (): void => {
+    passphraseRow.style.display = encryptCheckbox.checked ? '' : 'none';
+    passphraseInput.required = encryptCheckbox.checked;
+  };
+  syncPassphraseVisibility();
+  encryptCheckbox.addEventListener('change', syncPassphraseVisibility);
+
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    handlers.onSave(readSettingsForm(form));
+    const passphrase = encryptCheckbox.checked ? passphraseInput.value.trim() || undefined : undefined;
+    handlers.onSave(readSettingsForm(form), passphrase);
   });
 
   container.querySelector<HTMLButtonElement>('#settings-cancel')?.addEventListener('click', () => handlers.onCancel?.());
@@ -336,19 +398,15 @@ function readTrendValueLabels(value: FormDataEntryValue | null): TrendValueLabel
 function readSettingsForm(form: HTMLFormElement): Settings {
   const data = new FormData(form);
   const text = (name: string) => String(data.get(name) ?? '').trim();
-  const numberOr = (name: string, fallback: number) => {
-    const parsed = Number(data.get(name));
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-  };
 
   return {
     athleteId: text('athleteId'),
     apiKey: text('apiKey'),
     proxyUrl: text('proxyUrl'),
     sendTrainingAdvice: data.get('sendTrainingAdvice') === 'on',
-    daysForShortTermTrend: numberOr('daysForShortTermTrend', DEFAULT_SETTINGS.daysForShortTermTrend),
-    daysForLongTermTrend: numberOr('daysForLongTermTrend', DEFAULT_SETTINGS.daysForLongTermTrend),
-    stdDevMultiplier: numberOr('stdDevMultiplier', DEFAULT_SETTINGS.stdDevMultiplier),
+    daysForShortTermTrend: numberOr(data.get('daysForShortTermTrend'), DEFAULT_SETTINGS.daysForShortTermTrend),
+    daysForLongTermTrend: numberOr(data.get('daysForLongTermTrend'), DEFAULT_SETTINGS.daysForLongTermTrend),
+    stdDevMultiplier: numberOr(data.get('stdDevMultiplier'), DEFAULT_SETTINGS.stdDevMultiplier),
     trendValueLabels: readTrendValueLabels(data.get('trendValueLabels')),
     fieldRHR: text('fieldRHR') || DEFAULT_SETTINGS.fieldRHR,
     fieldRMSSD: text('fieldRMSSD') || DEFAULT_SETTINGS.fieldRMSSD,

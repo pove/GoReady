@@ -1,3 +1,4 @@
+import { escapeHtml } from './html';
 import { ZONE_COLORS } from './score';
 import type { ReadinessResult, ZScorePoint } from './types';
 
@@ -187,7 +188,7 @@ function renderTrail(trail: ZScorePoint[]): string {
 function renderCenterBadge(result: ReadinessResult): string {
   return `
     <circle cx="${CENTER_X}" cy="${CENTER_Y}" r="29" fill="${result.color}" class="gauge-center-badge" />
-    <text x="${CENTER_X}" y="${CENTER_Y}" text-anchor="middle" dominant-baseline="central" class="gauge-center-label">${result.label}</text>
+    <text x="${CENTER_X}" y="${CENTER_Y}" text-anchor="middle" dominant-baseline="central" class="gauge-center-label">${escapeHtml(result.label)}</text>
   `;
 }
 
@@ -229,7 +230,7 @@ function renderToday(today: ZScorePoint): string {
  */
 export function renderGauge(result: ReadinessResult, today: ZScorePoint, trail: ZScorePoint[] = []): string {
   return `
-    <svg viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_HEIGHT}" class="gauge" role="img" aria-label="Readiness gauge: ${result.label}">
+    <svg viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_HEIGHT}" class="gauge" role="img" aria-label="Readiness gauge: ${escapeHtml(result.label)}">
       ${renderZones()}
       ${renderGrid()}
       ${renderTrail(trail)}

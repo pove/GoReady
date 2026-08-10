@@ -2,6 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      connect-src is deliberately wide open, not 'self': the Proxy URL setting is
+      meant to point at a different origin (see proxy/README.md - Vercel/Netlify
+      deployments live on their own domain). script-src 'self' is what actually
+      matters here - it blocks any injected <script> or javascript: URI from
+      running at all, regardless of where the app is told to send requests.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src *; base-uri 'self'; form-action 'self'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#14532d" />
     <meta name="description" content="Daily training readiness from your intervals.icu HRV and resting heart rate." />

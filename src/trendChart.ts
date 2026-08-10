@@ -1,4 +1,5 @@
 import { isInBand, type TrendDay } from './baseline';
+import { escapeHtml } from './html';
 import type { Settings, TrendValueLabels } from './types';
 
 const DISPLAY_DAYS = 30;
@@ -142,12 +143,13 @@ function slugify(label: string): string {
  * convey, so it belongs in the text too rather than only in the paint.
  */
 function describeChart(label: string, visible: TrendDay[]): string {
+  const safeLabel = escapeHtml(label);
   const measured = visible.filter((d) => !Number.isNaN(d.value));
-  if (measured.length === 0) return `${label} trend: no measurements in the last ${visible.length} days`;
+  if (measured.length === 0) return `${safeLabel} trend: no measurements in the last ${visible.length} days`;
 
   const outOfBand = measured.filter((d) => !isInBand(d)).length;
   return (
-    `${label} trend, last ${visible.length} days: ${measured.length} measurements, ` +
+    `${safeLabel} trend, last ${visible.length} days: ${measured.length} measurements, ` +
     `${outOfBand} outside the expected range`
   );
 }
@@ -174,7 +176,7 @@ export function renderTrendChart(label: string, trend: TrendDay[], settings: Set
 
   return `
     <div class="trend-chart">
-      <div class="trend-chart-label">${label}</div>
+      <div class="trend-chart-label">${escapeHtml(label)}</div>
       <svg viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" class="trend-svg" role="img" aria-label="${describeChart(label, visible)}">
         ${renderHatchPattern(hatchId)}
         <text x="${PADDING.left - 4}" y="${(PADDING.top + 4).toFixed(1)}" class="trend-axis" text-anchor="end">${max}</text>
