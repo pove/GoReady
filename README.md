@@ -7,6 +7,8 @@ train today, shows that score on a gauge plus a 30-day trend for each metric,
 and (optionally) writes the score back to intervals.icu as the `TrainingAdvice`
 wellness field.
 
+<img src="docs/screenshots/dashboard.png" alt="GoReady dashboard: a HIT readiness gauge with a climbing trail, two supplementary insights, a training-advice banner, a stats table, and rMSSD/SDNN/RHR trend charts" width="360" />
+
 ## Credits
 
 The scoring algorithm and readiness gauge are based on a MATLAB script
@@ -58,13 +60,23 @@ left over from earlier in the day — it's overwritten with the current code.
 
 The gauge plots today's HRV/RHR z-scores as a point on a polar chart (angle =
 RHR z-score, radius = HRV z-score), the same geometry the original MATLAB
-chart used, with a fading trail showing where the last several days sat on
-the same chart. The chart paints five colored bands (not one per readiness
+chart used. The chart paints five colored bands (not one per readiness
 code — codes 2 and 3 both mean "train easy" and share the orange band). A
 small ⓘ button opens a dialog that names each band as the reference chart
 itself does (Stress / illness, Rest, Limit intensity, Train as planned, HIT)
 with a short description of the underlying RHR/HRV pattern, followed by the
 reference chart itself for anyone who wants the full diagram.
+
+The grey dots trailing behind today's blue-ringed marker are the previous 6
+days, plotted on those same axes — each one that day's own z-score against
+its own 30-day window at the time, not the raw HRV/RHR trajectory. They fade
+in both size and opacity the further back they go: the largest, most visible
+dot is yesterday, and each day before that is a little smaller and fainter,
+so the sequence of days reads at a glance without needing labels. A trail
+climbing toward a band (as below) shows a recovery in progress; one drifting
+away from it is worth noticing before the gauge's own color changes.
+
+<img src="docs/screenshots/gauge-closeup.png" alt="Close-up of the readiness gauge showing a 6-day trail of grey dots — smallest and faintest furthest back, largest and most visible for yesterday — climbing from the Normal band toward HIT, with today's blue-ringed marker and two supplementary insights below" width="320" />
 
 ## Insights
 
@@ -273,6 +285,8 @@ while the app is using it.
   carries that distinction for red-green colorblind readers and in print.
   Values are printed over the most recent, highest and lowest bars rather than
   all thirty, which collided into an unreadable smear at phone widths.
+
+<img src="docs/screenshots/trend-charts.png" alt="rMSSD, SDNN and RHR trend charts showing green in-range bars, red hatched out-of-range bars, the grey expected-range band, and the short-term average line" width="360" />
 
 ## Running the tests
 
