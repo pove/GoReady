@@ -236,13 +236,18 @@ export function renderSettingsForm(
             <input type="password" name="apiKeyPassphrase" id="api-key-passphrase" autocomplete="off" />
           </label>
           <p class="settings-hint">
-            The passphrase is never stored - only used on this device to encrypt/decrypt the
-            key. You'll be asked for it again each time you save with protection on, and once
-            per browser session to unlock the key.
+            Your Athlete ID and API key stay on this device only - never shared or sent
+            anywhere but intervals.icu. The passphrase itself is never stored either; you'll
+            need it again each time you save with protection on, and once per browser session
+            to unlock the key.
           </p>
           <label>Proxy URL
             <input type="text" name="proxyUrl" value="${escapeHtml(settings.proxyUrl)}" placeholder="./proxy.php" required />
           </label>
+          <p class="settings-hint">
+            Need to set one up? See the
+            <a href="https://github.com/pove/GoReady/blob/main/proxy/README.md" target="_blank" rel="noopener noreferrer">proxy deployment guide</a>.
+          </p>
         </fieldset>
 
         <fieldset>
