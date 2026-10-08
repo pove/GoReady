@@ -21,6 +21,7 @@ export default defineConfig({
         name: 'GoReady',
         short_name: 'GoReady',
         description: 'Daily training readiness from your intervals.icu HRV and resting heart rate.',
+        id: '/GoReady/',
         theme_color: '#14532d',
         background_color: '#f3f4f6',
         display: 'standalone',
